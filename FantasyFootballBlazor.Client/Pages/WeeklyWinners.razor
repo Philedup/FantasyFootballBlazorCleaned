@@ -1,0 +1,101 @@
+﻿@page "/weeklywinners"
+@inject IFootballDataService FootballDataService
+@inject ICommonDataService CommonDataService
+@using FantasyFootball.Shared
+@using FantasyFootball.Shared.Services
+@rendermode InteractiveServer
+
+<PageTitle>🏆 Weekly Winners</PageTitle>
+
+<div class="container mt-4">
+    <div class="text-center mb-4">
+        <h3 class="fw-bold text-uppercase">🏆 Weekly Winners</h3>
+    </div>
+
+    @if (Model?.Winners?.Any() == true)
+    {
+        <div class="table-responsive">
+            @foreach (var weekGroup in Model.Winners.GroupBy(x => x.Week).OrderBy(g => g.Key))
+            {
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <table class="table table-striped table-hover text-center">
+                            <thead class="bg-gradient-purple">
+                                <tr>
+                                    <th scope="col" colspan="3">🏅 Week @weekGroup.Key Winners</th>
+                                    
+                                </tr>
+                            </thead>
+                            <thead class="bg-indigo">
+                                <tr>
+                                    <th scope="col" class="col-2">Place</th>
+                                    <th scope="col" class="col-8">User</th>
+                                    <th scope="col" class="col-2">Prize ($)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var rank in weekGroup.OrderBy(y => y.Place))
+                                {
+                                    <tr class="@GetPlacementClass(rank.Place)">
+                                        <td>
+                                            <span class="badge @GetPlacementBadge(rank.Place)">#@rank.Place</span>
+                                        </td>
+                                        <td class="fw-bold">@rank.UserName</td>
+                                        <td>
+                                            <span class="badge bg-success fs-6">$@rank.Total</span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="text-center text-muted">No Weekly Winners Yet.</p>
+    }
+</div>
+
+@code {
+    private bool _loaded = false;
+    private WeeklyWinnersViewModel Model;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+            try
+            {
+                var year = await CommonDataService.GetCurrentYearAsync();
+                Model = await FootballDataService.CreateWeeklyWinnersViewModelAsync(year);
+                StateHasChanged(); // Trigger UI update after data loads
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error loading earnings: {ex.Message}");
+            }
+        }
+    }
+
+    // 🎨 Adds a background color to 1st, 2nd, and 3rd place rows
+    private string GetPlacementClass(int place) => place switch
+    {
+        1 => "table-warning",
+        2 => "table-secondary",
+        3 => "table-danger",
+        _ => ""
+    };
+
+    // 🎖️ Badge styles for rankings
+    private string GetPlacementBadge(int place) => place switch
+    {
+        1 => "bg-warning text-dark",
+        2 => "bg-secondary text-white",
+        3 => "bg-danger text-white",
+        _ => "bg-dark text-white"
+    };
+}

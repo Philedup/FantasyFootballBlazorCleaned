@@ -1,0 +1,22 @@
+﻿@namespace FantasyFootballBlazor.Client.Components
+@code {
+    [Parameter] public string FirstName { get; set; } = "";
+    [Parameter] public string LastName { get; set; } = "";
+    [Parameter] public bool IsDefense { get; set; } = false;
+}
+
+@if (string.IsNullOrWhiteSpace(LastName))
+{
+    <span class="fw-bold text-primary fs-5">?</span> <!-- Missing Player -->
+}
+else
+{
+    @if (IsDefense)
+    {
+        @FirstName
+    }
+    else
+    {
+        @($"{FirstName} {LastName}")
+    }
+}

@@ -1,0 +1,163 @@
+﻿@page "/admin/weeklywinners"
+@inject IAdminService AdminService
+@inject ICommonDataService CommonDataService
+@inject NavigationManager Navigation
+@using FantasyFootball.Shared
+@using FantasyFootball.Shared.Services
+
+@rendermode InteractiveServer
+
+<PageTitle>Admin Weekly Winners</PageTitle>
+
+<div class="container mt-4">
+    <h3><i class="fas fa-cog"></i> Weekly Winners</h3>
+
+    @if (Model == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>Year</label>
+                            <input type="number" class="form-control" @bind="Model.Year" min="2000" max="2100" />
+                        </div>
+                        <div class="form-group">
+                            <label>Week</label>
+                            <input type="number" class="form-control" @bind="Model.Week" min="1" max="18" />
+                        </div>
+                        <div class="form-group">
+                            <label>User</label>
+                            <select class="form-control" @bind="Model.UserId">
+                                <option value="">(Select...)</option>
+                                @foreach (var user in Model?.UserList ?? new List<DropdownModel>())
+                                {
+                                    <option value="@user.Value">@user.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Place</label>
+                            <input type="number" class="form-control" @bind="Model.Place" min="1" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-1">
+            <div class="col-6 d-flex justify-content-between">
+                <button class="btn btn-lg btn-outline-dark" @onclick="Cancel">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn btn-lg btn-primary" @onclick="SaveWinner">
+                    <i class="fas fa-check"></i> Save
+                </button>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead class="bg-indigo text-white">
+                        <tr>
+                            <th>&nbsp;</th>
+                            <th>Week</th>
+                            <th>User</th>
+                            <th>Place</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model?.Winners?.Any() == true)
+                        {
+                            @foreach (var item in Model.Winners)
+                            {
+                                <tr>
+                                    <td>
+                                        <button class="btn btn-primary" @onclick="() => EditWinner(Convert.ToInt32(item.Id))">
+                                            <i class="fas fa-edit mr-1"></i> Edit
+                                        </button>
+                                    </td>
+                                    <td>@item.Week</td>
+                                    <td>@item.UserName</td>
+                                    <td>@item.Place</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr><td colspan="4" class="text-center">No winners found.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private WeeklyWinnersViewModel? Model;
+    private bool _loaded = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+
+            if (!await AdminService.EnsureAdminAccessAsync()) return;
+
+            await LoadWinners();
+            StateHasChanged(); // Ensures UI reflects loaded data
+        }
+    }
+
+    private async Task LoadWinners()
+    {
+        try
+        {
+            int currentYear = await CommonDataService.GetCurrentYearAsync();
+            int currentWeek = await CommonDataService.GetCurrentWeekAsync();
+
+            Model = await AdminService.GetWeeklyWinnersViewModelAsync(currentYear, currentWeek)
+                    ?? new WeeklyWinnersViewModel { Year = currentYear, Week = currentWeek };
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading winners: {ex.Message}");
+        }
+    }
+
+    private async Task SaveWinner()
+    {
+        if (Model == null) return;
+
+        var success = await AdminService.SaveWeeklyWinnerAsync(Model);
+        if (success)
+        {
+            await LoadWinners(); // Refresh data
+            StateHasChanged();
+        }
+        else
+        {
+            Console.Error.WriteLine("Failed to save winner.");
+        }
+    }
+
+    private void EditWinner(int id)
+    {
+        Navigation.NavigateTo($"/admin/weekly-winners/edit/{id}");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/admin/weekly-winners");
+    }
+}

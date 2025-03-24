@@ -1,0 +1,82 @@
+﻿@page "/admin/schedule"
+@inject IAdminService AdminService
+@inject NavigationManager Navigation
+@using FantasyFootball.Shared
+@using FantasyFootball.Shared.Services
+
+@rendermode InteractiveServer
+
+<PageTitle>Schedule Admin</PageTitle>
+
+<div class="container mt-4">
+    <h3><i class="fas fa-cog"></i> Schedule Admin</h3>
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead class="bg-indigo text-white">
+                    <tr>
+                        <th>&nbsp;</th>
+                        <th>Week</th>
+                        <th>Start Date</th>
+                        <th>Games</th>
+                        <th>Bye Teams</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model?.Week?.Any() == true)
+                    {
+                        @foreach (var item in Model.Week.OrderBy(x => DateTime.Parse(x.StartDate)))
+                        {
+                            <tr>
+                                <td>
+                                    <button class="btn btn-primary" @onclick="() => EditSchedule(item.Week)">
+                                        <i class="fas fa-edit mr-1"></i>Edit
+                                    </button>
+                                </td>
+                                <td>@item.Week</td>
+                                <td>@item.StartDate</td>
+                                <td>@item.Games</td>
+                                <td>@item.ByeTeams</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="5" class="text-center">No schedule data available.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _loaded = false;
+    private ScheduleAdminListViewModel Model;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+
+            if (!await AdminService.EnsureAdminAccessAsync()) return;
+
+            try
+            {
+                Model = await AdminService.CreateScheduleListViewModelAsync();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error loading schedule: {ex.Message}");
+            }
+        }
+    }
+
+    private void EditSchedule(int week)
+    {
+        Navigation.NavigateTo($"/admin/schedule/edit/{week}");
+    }
+}

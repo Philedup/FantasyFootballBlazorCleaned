@@ -1,0 +1,125 @@
+﻿@page "/admin/users"
+@inject IAdminService AdminService
+@inject NavigationManager Navigation
+@using FantasyFootball.Shared
+@using FantasyFootball.Shared.Services
+
+@rendermode InteractiveServer
+
+<PageTitle>Users</PageTitle>
+
+<div class="container mt-4">
+    <h3><i class="fas fa-cog"></i> Users</h3>
+
+    <div class="mb-3">
+        <button class="btn btn-outline-dark" @onclick="ReturnToMyTeam">
+            <i class="fas fa-undo"></i> Return to My Team
+        </button>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead class="bg-indigo text-white">
+                    <tr>
+                        <th>&nbsp;</th>
+                        <th>User Name</th>
+                        <th>Team Name</th>
+                        <th>Email</th>
+                        <th>Paid</th>
+                        <th>Survival</th>
+                        <th>Paypal Email</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model?.Users?.Any() == true)
+                    {
+                        @foreach (var user in Model.Users)
+                        {
+                            <tr>
+                                <td>
+                                    <button class="btn btn-primary" @onclick="() => EditUser(user.UserId)">
+                                        <i class="fas fa-edit mr-1"></i> Edit
+                                    </button>
+                                </td>
+                                <td>@user.UserName</td>
+                                <td>@user.UserTeamName</td>
+                                <td>@user.Email</td>
+                                <td>
+                                    <input type="checkbox"
+                                           @bind:get="user.Paid"
+                                           @bind:set="(value) => UpdatePaidStatus(user, value)" />
+                                </td>
+                                <td>
+                                    <input type="checkbox"
+                                           @bind:get="user.Survival"
+                                           @bind:set="(value) => UpdateSurvivalStatus(user, value)" />
+                                </td>
+                                <td>@user.PaypalEmail</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="7" class="text-center">No users found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private UserListViewModel Model = new();
+    private bool _loaded = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+
+            if (!await AdminService.EnsureAdminAccessAsync()) return;
+
+            try
+            {
+                Model = await AdminService.GetUserListViewModelAsync();
+                StateHasChanged(); // Ensure UI updates after loading
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error loading users: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task UpdatePaidStatus(UserModel user, bool? paid)
+    {
+        user.Paid = paid; // Update local model first for instant UI feedback
+        var success = await AdminService.UpdateUserPaidAsync(user.UserId, paid == true);
+        if (!success)
+        {
+            Console.Error.WriteLine($"Failed to update paid status for User ID: {user.UserId}");
+        }
+    }
+
+    private async Task UpdateSurvivalStatus(UserModel user, bool? survival)
+    {
+        user.Survival = survival; // Update local model first for instant UI feedback
+        var success = await AdminService.UpdateUserSurvivorAsync(user.UserId, survival == true);
+        if (!success)
+        {
+            Console.Error.WriteLine($"Failed to update survival status for User ID: {user.UserId}");
+        }
+    }
+
+    private void EditUser(string userId)
+    {
+        Navigation.NavigateTo($"/admin/useredit/{userId}");
+    }
+
+    private void ReturnToMyTeam()
+    {
+        Navigation.NavigateTo("/home/myteam");
+    }
+}

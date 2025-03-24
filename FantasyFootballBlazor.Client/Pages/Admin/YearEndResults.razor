@@ -1,0 +1,224 @@
+﻿@page "/admin/yearendresults"
+@inject IAdminService AdminService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+@rendermode InteractiveServer
+@using FantasyFootball.Shared
+@using FantasyFootball.Shared.Services
+
+<PageTitle>Year End Results</PageTitle>
+
+<div class="container mt-4">
+    <h3><i class="fas fa-users"></i> Year End Results</h3>
+
+    @if (IsLoading)
+    {
+        <div class="text-center mt-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p>Loading year end data...</p>
+        </div>
+    }
+    else if (Model == null)
+    {
+        <p class="text-danger">Failed to load year end data.</p>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header">
+                <h5>Add Player Data</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Year</label>
+                    <input type="number" class="form-control" @bind="Model.AddPlayer.Year" min="2000" max="2100" />
+                </div>
+
+                <div class="form-group">
+                    <label>Game Type</label>
+                    <select class="form-control" @bind="Model.AddPlayer.GameTypeId">
+                        @foreach (var item in Model.AddPlayer.GameTypeList)
+                        {
+                            <option value="@item.Value">@item.Text</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>User</label>
+                    <select class="form-control" @bind="Model.AddPlayer.UserId">
+                        <option value="">(Select...)</option>
+                        @foreach (var item in Model.AddPlayer.UserList)
+                        {
+                            <option value="@item.Value">@item.Text</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Total Points</label>
+                    <input type="number" class="form-control" @bind="Model.AddPlayer.TotalPoints" />
+                </div>
+
+                <div class="form-group">
+                    <label>Total Earned</label>
+                    <input type="number" class="form-control" @bind="Model.AddPlayer.TotalEarned" />
+                </div>
+
+                <div class="form-group">
+                    <label>Rank</label>
+                    <input type="number" class="form-control" @bind="Model.AddPlayer.Rank" />
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-1">
+            <div class="col-3 d-flex justify-content-between">
+                <button class="btn btn-lg btn-outline-dark" @onclick="Cancel">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn btn-lg btn-primary" @onclick="SavePlayerData"
+                        disabled="@(string.IsNullOrEmpty(Model.AddPlayer.UserId) || string.IsNullOrEmpty(Model.AddPlayer.GameTypeId.ToString()))">
+                    <i class="fas fa-check"></i> Save
+                </button>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead class="bg-indigo text-white">
+                        <tr>
+                            <th>Year</th>
+                            <th>Game Type</th>
+                            <th>User</th>
+                            <th>Total Points</th>
+                            <th>Total Earned</th>
+                            <th>Rank</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model?.Users?.Any() == true)
+                        {
+                            @foreach (var item in Model.Users)
+                            {
+                                <tr>
+                                    <td>@item.Year</td>
+                                    <td>@item.GameMode</td>
+                                    <td>@item.UserName</td>
+                                    <td>@item.TotalPoints</td>
+                                    <td>@item.TotalEarned</td>
+                                    <td>@item.Rank</td>
+                                    <td>
+                                        <button class="btn btn-danger" @onclick="() => ConfirmDelete(item.UserId, item.Year, item.GameTypeId)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr><td colspan="7" class="text-center">No player data available.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        @if (ShowSuccessMessage)
+        {
+            <div class="alert alert-success mt-2" role="alert">
+                Player data saved successfully!
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private YearlyUserDataViewModel? Model;
+    private bool ShowSuccessMessage = false;
+    private bool IsLoading = true;
+    private bool _loaded = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+
+            if (!await AdminService.EnsureAdminAccessAsync()) return;
+
+            await LoadYearlyData();
+            StateHasChanged(); // Make sure UI reflects data after first render
+        }
+    }
+
+    private async Task LoadYearlyData()
+    {
+        try
+        {
+            IsLoading = true;
+            Model = await AdminService.GetYearlyUserDataViewModelAsync() ?? new YearlyUserDataViewModel();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading player data: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task SavePlayerData()
+    {
+        if (Model == null) return;
+
+        bool success = await AdminService.SaveYearlyUserDataAsync(Model);
+        if (success)
+        {
+            ShowSuccessMessage = true;
+            await LoadYearlyData();
+            StateHasChanged();
+        }
+        else
+        {
+            Console.Error.WriteLine("[ERROR] Failed to save player data.");
+        }
+    }
+
+    private async Task ConfirmDelete(string userId, int year, int gameTypeId)
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this player record?");
+        if (confirmed)
+        {
+            await DeletePlayerData(userId, year, gameTypeId);
+        }
+    }
+
+    private async Task DeletePlayerData(string userId, int year, int gameTypeId)
+    {
+        bool success = await AdminService.DeleteYearlyUserDataAsync(userId, year, gameTypeId);
+
+        if (success)
+        {
+            ShowSuccessMessage = true;
+            await LoadYearlyData(); // Refresh the table after deletion
+            StateHasChanged();
+        }
+        else
+        {
+            Console.Error.WriteLine("[ERROR] Failed to delete player data.");
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/yearlyuserdata");
+    }
+}

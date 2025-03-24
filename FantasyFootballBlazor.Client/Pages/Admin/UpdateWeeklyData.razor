@@ -1,0 +1,42 @@
+﻿@page "/admin/updateweekly"
+@inject IYahooFootballDataService YahooFootballDataService
+@inject ICommonDataService CommonDataService
+@inject IAdminService AdminService
+@using FantasyFootball.Shared.Services
+
+<PageTitle>Update Weekly Data</PageTitle>
+
+<div class="container mt-4">
+    <h3 class="fw-bold text-uppercase">📊 Update Weekly Player Data</h3>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success">@successMessage</div>
+    }
+
+    <div class="mb-3">
+        <label class="fw-bold">Select Week</label>
+        <select class="form-select" @bind="SelectedWeek">
+            @for (int i = 1; i <= 18; i++)
+            {
+                <option value="@i">Week @i</option>
+            }
+        </select>
+    </div>
+
+    <button class="btn btn-primary" @onclick="Save">🔄 Update Weekly Data</button>
+</div>
+
+@code {
+    private int SelectedWeek = 1;
+    private string successMessage;
+
+    private async Task Save()
+    {
+        if (!await AdminService.EnsureAdminAccessAsync()) return;
+
+        var year = await CommonDataService.GetCurrentYearAsync();
+        await YahooFootballDataService.CheckUpdateAsync(SelectedWeek, year, false);
+        successMessage = $"Weekly data for Week {SelectedWeek} updated successfully!";
+    }
+}

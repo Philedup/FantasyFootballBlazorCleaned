@@ -1,0 +1,85 @@
+﻿@page "/earned"
+@inject IFootballDataService FootballDataService
+@inject ICommonDataService CommonDataService
+@using FantasyFootball.Shared
+@using FantasyFootball.Shared.Services
+@rendermode InteractiveServer
+
+<PageTitle>💰 Weekly Pick Earnings</PageTitle>
+
+<div class="container mt-4">
+    <div class="text-center mb-4">
+        <h3 class="fw-bold text-uppercase">💰 Weekly Pick Earnings</h3>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover text-center">
+            <thead class="bg-gradient-purple">
+                <tr>
+                    <th>Rank</th>
+                    <th>Team</th>
+                    <th>Total Earnings</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model?.Users?.Any() == true)
+                {
+                    @foreach (var (rank, index) in Model.Users.OrderByDescending(u => u.TotalEarned).Select((u, i) => (u, i + 1)))
+                    {
+                        <tr>
+                            <td><span class="badge bg-primary fs-6">#@index</span></td> <!-- Rank -->
+                            <td>
+                                <button class="btn btn-link text-decoration-none fw-bold"
+                                        @onclick="() => LoadStats(rank.UserId, 1)">
+                                    @rank.UserTeamName
+                                </button>
+                            </td>
+                            <td class="fw-bold text-success">$@rank.TotalEarned.ToString("N2")</td> <!-- Currency Formatting -->
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="3" class="text-center text-muted">
+                            No Weekly Winners Yet.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private bool _loaded = false;
+    private EarningsViewModel Model;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+            await LoadEarnings();
+            StateHasChanged(); // Ensure UI updates
+        }
+    }
+
+    private async Task LoadEarnings()
+    {
+        try
+        {
+            var year = await CommonDataService.GetCurrentYearAsync();
+            Model = await FootballDataService.CreateEarningsViewModelAsync(year);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading earnings: {ex.Message}");
+        }
+    }
+
+    private void LoadStats(string teamId, int mode)
+    {
+        Console.WriteLine($"LoadStats called for Team ID: {teamId}, Mode: {mode}");
+    }
+}

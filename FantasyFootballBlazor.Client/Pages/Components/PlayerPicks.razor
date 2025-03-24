@@ -1,0 +1,70 @@
+﻿@namespace FantasyFootballBlazor.Client.Components
+@using FantasyFootball.Shared
+
+<div class="card shadow-sm">
+    <!-- Card Header -->
+    <div class="card-header bg-gradient-purple text-white text-center">
+        <h5 class="mb-0">@Title</h5>
+    </div>
+
+    <!-- Card Body -->
+    <div class="card-body">
+        <div class="row g-3"> <!-- Bootstrap grid spacing -->
+            @foreach (var player in Players)
+            {
+                <div class="col-md-4">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <!-- Player Image -->
+                            <img src="@player.PlayerPictureImageUrl"
+                                 alt="@player.FullName"
+                                 class="img-fluid rounded-circle mb-2" />
+
+                            <!-- Player Info -->
+                            <h6 class="fw-bold">@player.Position</h6>
+                            <p class="mb-1">@player.FullName</p>
+
+                            <!-- Player Points -->
+                            <div class="alert alert-primary text-center fw-bold p-2 mt-2">
+                                @player.TotalPoints
+                            </div>
+
+                            <!-- Lock/Add/Swap Icon -->
+                            <div class="mt-2">
+                                @if (player.Locked)
+                                {
+                                    <span class="text-secondary">
+                                        <i class="bi bi-lock-fill fs-4"></i> <!-- Lock Icon -->
+                                    </span>
+                                }
+                                else
+                                {
+                                    var playerUrl = $"/players/{GameTypeId}/{player.Position}";
+
+                                    @if (player.PlayerId > 0)
+                                    {
+                                        <a href="@playerUrl" class="text-primary">
+                                            <i class="bi bi-arrow-left-right fs-4"></i> <!-- Swap Icon -->
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <a href="@playerUrl" class="text-primary">
+                                            <i class="bi bi-plus-circle-fill fs-4"></i> <!-- Add Icon -->
+                                        </a>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Player Picks";
+    [Parameter] public int GameTypeId { get; set; } = 1;
+    [Parameter] public List<PlayerModel> Players { get; set; } = new();
+}

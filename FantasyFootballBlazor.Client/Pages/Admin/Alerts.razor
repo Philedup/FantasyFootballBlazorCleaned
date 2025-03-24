@@ -1,0 +1,80 @@
+﻿@page "/admin/alerts"
+@inject IAdminService AdminService
+@using FantasyFootball.Shared.Services
+@using FantasyFootball.Shared
+@rendermode InteractiveServer
+
+<PageTitle>Alerts</PageTitle>
+
+<div class="container mt-4">
+    <div class="text-center mb-4">
+        <h3 class="fw-bold text-uppercase">⚠️ Manage Alerts</h3>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Message))
+    {
+        <div class="alert alert-success text-center">
+            ✅ <strong>@Message</strong>
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">📝 Edit Alert Messages</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="fw-bold">Index Page Alert</label>
+                <textarea class="form-control" rows="3" @bind="Model.IndexPageAlert"></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="fw-bold">My Team Page Alert</label>
+                <textarea class="form-control" rows="3" @bind="Model.MyTeamPageAlert"></textarea>
+            </div>
+
+            <button class="btn btn-primary" @onclick="SaveAlerts">💾 Save Alerts</button>
+        </div>
+    </div>
+</div>
+@code {
+    private bool _loaded = false;
+    private UpdateAlertsViewModel Model = new();
+    private string Message;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+
+            if (!await AdminService.EnsureAdminAccessAsync())
+                return;
+
+            try
+            {
+                // 🟢 Load existing alerts
+                Model = await AdminService.GetAlertsViewModelAsync();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error loading alerts: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task SaveAlerts()
+    {
+        try
+        {
+            await AdminService.UpdateAlertAsync(Model.IndexPageAlert, Model.MyTeamPageAlert);
+            Message = "Alerts updated successfully!";
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error saving alerts: {ex.Message}");
+            Message = "⚠️ Failed to update alerts.";
+        }
+    }
+}

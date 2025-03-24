@@ -1,0 +1,64 @@
+﻿@page "/admin/emailleague"
+@inject IAdminService AdminService
+@using FantasyFootball.Shared.Services
+@using FantasyFootball.Shared
+
+<PageTitle>Email League</PageTitle>
+
+<div class="container mt-4">
+    <h3 class="fw-bold text-uppercase">📧 Send Email to League</h3>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success">@successMessage</div>
+    }
+
+    <div class="mb-3">
+        <label class="fw-bold">Subject</label>
+        <input type="text" class="form-control" @bind="EmailSubject" />
+    </div>
+    <div class="mb-3">
+        <label class="fw-bold">Message</label>
+        <textarea class="form-control" @bind="EmailMessage"></textarea>
+    </div>
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" @bind="PaidOnly" />
+        <label class="form-check-label">Send only to paid users</label>
+    </div>
+
+    <button class="btn btn-primary mt-2" @onclick="SendEmail">📤 Send Email</button>
+</div>
+
+@code {
+    private bool _loaded = false;
+    private string EmailSubject;
+    private string EmailMessage;
+    private bool PaidOnly;
+    private string successMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+
+            if (!await AdminService.EnsureAdminAccessAsync())
+                return;
+
+            StateHasChanged(); // Trigger UI update if necessary
+        }
+    }
+
+    private async Task SendEmail()
+    {
+        var model = new EmailLeagueViewModel
+            {
+                EmailSubject = EmailSubject,
+                EmailMessage = EmailMessage,
+                PaidOnly = PaidOnly
+            };
+
+        await AdminService.SendEmailToLeagueAsync(model);
+        successMessage = "Email sent successfully!";
+    }
+}

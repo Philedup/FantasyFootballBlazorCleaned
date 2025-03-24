@@ -1,0 +1,289 @@
+﻿@page "/admin/schedule/edit/{week:int}"
+@inject IAdminService AdminService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@using FantasyFootball.Shared
+@using FantasyFootball.Shared.Services
+@using System.Globalization
+@rendermode InteractiveServer
+
+<PageTitle>Schedule Edit</PageTitle>
+
+<div class="container mt-4">
+    <h3><i class="fas fa-users"></i> Schedule Admin</h3>
+
+    @if (IsLoading)
+    {
+        <div class="text-center mt-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p>Loading schedule...</p>
+        </div>
+    }
+    else if (Model == null)
+    {
+        <p class="text-danger">Failed to load schedule.</p>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header">
+                <h5>Add Game</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Year</label>
+                    <input type="number" class="form-control" @bind="Model.Year" min="2000" max="2100" />
+                </div>
+                <div class="form-group">
+                    <label>Week</label>
+                    <input type="number" class="form-control" @bind="Model.Week" min="1" max="18" />
+                </div>
+                <div class="form-group">
+                    <label>Away Team</label>
+                    <select class="form-control" @bind="Model.AwayTeamId">
+                        <option value="">(Select Team...)</option>
+                        @foreach (var team in Model?.AwayTeams ?? new List<DropdownModel>())
+                        {
+                            <option value="@team.Value">@team.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Home Team</label>
+                    <select class="form-control" @bind="Model.HomeTeamId">
+                        <option value="">(Select Team...)</option>
+                        @foreach (var team in Model?.HomeTeams ?? new List<DropdownModel>())
+                        {
+                            <option value="@team.Value">@team.Text</option>
+                        }
+                    </select>
+                    @if (Model.HomeTeamId == Model.AwayTeamId && Model.HomeTeamId != null)
+                    {
+                        <p class="text-danger">Home and Away teams cannot be the same.</p>
+                    }
+                </div>
+                <div class="form-group">
+                    <label>Schedule Date</label>
+                    <input type="date" class="form-control" @bind="Model.ScheduleDate" />
+                </div>            
+                <div class="form-group">
+                    <label>Schedule Time</label>
+                    <div class="input-group">
+                        <input type="time" class="form-control" @bind="Model.ScheduleTime" />
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-outline-secondary" @onclick="() => SetDefaultTime(12, 0)">12 PM</button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="() => SetDefaultTime(15, 5)">3:05 PM</button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="() => SetDefaultTime(15, 25)">3:25 PM</button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="() => SetDefaultTime(19, 15)">7:15 PM</button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="() => SetDefaultTime(19, 20)">7:20 PM</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="tieBreakGame" @bind="Model.TieBreakGame" />
+                    <label class="form-check-label" for="tieBreakGame">Tie Break Game</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-1">
+            <div class="col-3 d-flex justify-content-between">
+                <button class="btn btn-lg btn-outline-dark" @onclick="Cancel">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn btn-lg btn-primary" @onclick="SaveSchedule"
+                        disabled="@(string.IsNullOrEmpty(Model.AwayTeamId.ToString()) || string.IsNullOrEmpty(Model.HomeTeamId.ToString()) || Model.HomeTeamId == Model.AwayTeamId)">
+                    <i class="fas fa-check"></i> Save
+                </button>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead class="bg-indigo text-white">
+                        <tr>
+                            <th>Id</th>
+                            <th>Away Team</th>
+                            <th>Home Team</th>
+                            <th>Date</th>
+                            <th>Away Score</th>
+                            <th>Home Score</th>
+                            <th>TieBreakGame</th>
+                            <th>&nbsp;</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model?.ScheduledGames?.Any() == true)
+                        {
+                            @foreach (var item in Model.ScheduledGames.OrderBy(g => g.ScheduleDate))
+                            {
+                                <tr>
+                                    <td>@item.ScheduleId</td>
+                                    <td>@item.AwayTeam</td>
+                                    <td>@item.HomeTeam</td>
+                                    <td>@item.ScheduleDate</td>
+                                    <td>
+                                        @if (item.TiebreakGame)
+                                        {
+                                            <input type="text" class="form-control" @bind="item.AwayTeamScore" />
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (item.TiebreakGame)
+                                        {
+                                            <input type="text" class="form-control" @bind="item.HomeTeamScore" />
+                                        }
+                                    </td>
+                                    <td>
+                                        <input type="checkbox" @bind="item.TiebreakGame" />
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-danger" @onclick="() => ConfirmDeleteGame(item.ScheduleId)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr><td colspan="8" class="text-center">No games scheduled.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        @if (ShowSuccessMessage)
+        {
+            <div class="alert alert-success mt-2" role="alert">
+                Schedule saved successfully!
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public int Week { get; set; }
+    private ScheduleAdminViewModel? Model;
+    private bool ShowSuccessMessage = false;
+    private bool IsLoading = true;
+    private bool _loaded = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+
+            if (!await AdminService.EnsureAdminAccessAsync()) return;
+
+            await LoadSchedule();
+            StateHasChanged(); // ensure the UI updates after loading
+        }
+    }
+
+    private async Task LoadSchedule()
+    {
+        try
+        {
+            IsLoading = true;
+            Model = await AdminService.GetScheduleAdminViewModelAsync(Week) ?? new ScheduleAdminViewModel();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading schedule: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task SaveSchedule()
+    {
+        if (Model == null) return;
+
+        var success = await AdminService.SaveScheduleAsync(Model);
+        if (success)
+        {
+            ShowSuccessMessage = true; // Show success message
+            await LoadSchedule(); // Refresh page data without navigating
+            StateHasChanged(); // Ensure UI updates
+        }
+        else
+        {
+            Console.Error.WriteLine("Failed to save schedule.");
+        }
+    }
+
+    private async Task ConfirmDeleteGame(int scheduleId)
+    {
+        if (await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this game?"))
+        {
+            await DeleteGame(scheduleId);
+        }
+    }
+
+    private async Task DeleteGame(int scheduleId)
+    {
+        if (Model == null) return;
+
+        // Find the game before deleting it to get the teams
+        var gameToDelete = Model.ScheduledGames.FirstOrDefault(g => g.ScheduleId == scheduleId);
+        if (gameToDelete == null) return;
+
+        var success = await AdminService.DeleteScheduledGameAsync(scheduleId);
+        if (success)
+        {
+            Model.ScheduledGames.RemoveAll(g => g.ScheduleId == scheduleId);
+
+            // Add the teams back to the dropdown lists if they are not already present
+            if (!Model.AwayTeams.Any(t => t.Value == gameToDelete.AwayTeamId.ToString()))
+            {
+                Model.AwayTeams.Add(new DropdownModel { Value = gameToDelete.AwayTeamId.ToString(), Text = gameToDelete.AwayTeam });
+            }
+
+            if (!Model.HomeTeams.Any(t => t.Value == gameToDelete.HomeTeamId.ToString()))
+            {
+                Model.HomeTeams.Add(new DropdownModel { Value = gameToDelete.HomeTeamId.ToString(), Text = gameToDelete.HomeTeam });
+            }
+
+            // Sort dropdowns alphabetically
+            Model.AwayTeams = Model.AwayTeams.OrderBy(t => t.Text).ToList();
+            Model.HomeTeams = Model.HomeTeams.OrderBy(t => t.Text).ToList();
+
+            StateHasChanged(); // Ensure UI updates
+        }
+        else
+        {
+            Console.Error.WriteLine($"Failed to delete game with ID: {scheduleId}");
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/admin/schedule");
+    }
+
+    private void SetDefaultTime(int hour, int minute)
+    {
+        if (Model.ScheduleDate == default)
+        {
+            Model.ScheduleDate = DateTime.Today; // Ensure a valid date is set
+        }
+
+        Model.ScheduleTime = new DateTime(
+            Model.ScheduleDate.Year,
+            Model.ScheduleDate.Month,
+            Model.ScheduleDate.Day,
+            hour,
+            minute,
+            0
+        );
+    }
+}

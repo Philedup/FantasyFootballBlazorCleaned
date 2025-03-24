@@ -1,0 +1,331 @@
+﻿@page "/players/{GameTypeId:int?}/{position?}"
+@inject IPlayersService PlayersService
+@inject ICommonDataService CommonDataService
+@inject IUserService UserService
+@using FantasyFootball.Shared
+@using FantasyFootball.Shared.Services
+@rendermode InteractiveServer
+<PageTitle>NFL Players</PageTitle>
+
+<!-- Return to My Team Button -->
+<a href="/myteam" class="btn btn-outline-dark btn-icon-left mb-3">
+    <i class="fas fa-undo"></i> Return to My Team
+</a>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-dark text-white text-center">
+        <h5 class="mb-0">🏈 Available NFL Players</h5>
+    </div>
+    <div class="card-body">
+
+        <!-- Filters, Search, and Current Selection -->
+        <div class="row mb-3">
+            <!-- Position Filter -->
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body p-2">
+                        <label class="fw-bold text-primary d-block text-start">Position</label>
+                        <select class="form-select mt-1" value="@Position" @onchange="OnPositionChanged">
+                            @foreach (var position in Positions)
+                            {
+                                <option value="@position.Value">@position.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Player -->
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body p-2">
+                        <label class="fw-bold text-primary d-block text-start">Search Player</label>
+                        <input @bind="SearchTerm" type="text" class="form-control mt-1" placeholder="Search by name..." @oninput="OnSearchChanged" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Selection (Text on Separate Line) -->
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body p-2 text-start">
+                        <label class="fw-bold text-primary d-block">Current Selection</label>
+                        <div class="d-flex align-items-center">
+                            @if (!string.IsNullOrEmpty(CurrentPlayerName))
+                            {
+                                <img src="@CurrentPlayerImg" alt="Player Image" class="rounded-circle me-2" style="width: 40px; height: 40px;">
+                                <span class="fw-bold">@CurrentPlayerName</span>
+                            }
+                            else
+                            {
+                                <span class="text-secondary">No player selected</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Player Table -->
+        <div class="table-responsive">
+            <table class="table table-striped table-hover text-center">
+                <thead class="bg-indigo text-white">
+                    <tr>
+                        <th></th> <!-- Action Column -->
+                        <th class="sortable">
+                            <button class="btn btn-link text-white p-0" @onclick='() => SortBy("FullName")'>
+                                Player ⬍
+                            </button>
+                        </th>
+                        <th class="sortable">
+                            <button class="btn btn-link text-white p-0" @onclick='() => SortBy("TotalPoints")'>
+                                Total Points ⬍
+                            </button>
+                        </th>
+                        <th>Opponent</th>
+                        @if (Position == "QB")
+                        {
+                            <th>Pa. Yards</th>
+                            <th>Pa. TD</th>
+                            <th>Int</th>
+                        }
+                        @if (Position == "QB" || Position == "RB" || Position == "WR" || Position == "TE")
+                        {
+                            <th>Ru. Yards</th>
+                            <th>Ru. TD</th>
+                            <th>Fumb Lost</th>
+                            <th>2pt Conv</th>
+                        }
+                        @if (Position == "RB" || Position == "WR" || Position == "TE")
+                        {
+                            <th>Rec. Yards</th>
+                            <th>Rec. TD</th>
+                            <th>Ret Yds</th>
+                            <th>Ret TDs</th>
+                        }
+                        @if (Position == "K")
+                        {
+                            <th>PAT</th>
+                            <th>PAT Miss</th>
+                            <th>0-19</th>
+                            <th>20-29</th>
+                            <th>30-39</th>
+                            <th>40-49</th>
+                            <th>50+</th>
+                        }
+                        @if (Position == "DEF")
+                        {
+                            <th>Pts Allowed</th>
+                            <th>Sacks</th>
+                            <th>Ints</th>
+                            <th>Fumb Rec</th>
+                            <th>Safety</th>
+                            <th>Def TD</th>
+                            <th>Blk Kick</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var player in PagedPlayers)
+                    {
+                        <tr>
+                            <td>
+                                @if (player.Locked)
+                                {
+                                    <i class="bi bi-lock-fill text-secondary"></i> <!-- Locked Player -->
+                                }
+                                else
+                                {
+                                    <button class="btn btn-success btn-sm" @onclick="() => AddPlayer(player.PlayerId)">
+                                        <i class="bi bi-plus-lg"></i> <!-- Add Player -->
+                                    </button>
+                                }
+                            </td>
+                            <td>@player.FullName</td>
+                            <td class="fw-bold">@player.TotalPoints</td>
+                            <td>@player.Opponent</td>
+                            @if (player.Position == "QB")
+                            {
+                                <td>@player.PlayerStats.Sum(x => x.PassingYards)</td>
+                                <td>@player.PlayerStats.Sum(x => x.PassingTouchdowns)</td>
+                                <td>@player.PlayerStats.Sum(x => x.PassingInterceptions)</td>
+                            }
+                            @if (player.Position == "QB" || player.Position == "RB" || player.Position == "WR" || player.Position == "TE")
+                            {
+                                <td>@player.PlayerStats.Sum(x => x.RushingYards)</td>
+                                <td>@player.PlayerStats.Sum(x => x.RushingTouchdowns)</td>
+                                <td>@player.PlayerStats.Sum(x => x.FumblesLost)</td>
+                                <td>@player.PlayerStats.Sum(x => x.TwoPointConversions)</td>
+                            }
+                            @if (player.Position == "RB" || player.Position == "WR" || player.Position == "TE")
+                            {
+                                <td>@player.PlayerStats.Sum(x => x.ReceptionYards)</td>
+                                <td>@player.PlayerStats.Sum(x => x.ReceptionTouchdowns)</td>
+                                <td>@player.PlayerStats.Sum(x => x.ReturnYards)</td>
+                                <td>@player.PlayerStats.Sum(x => x.ReturnTouchdowns)</td>
+                            }
+                            @if (player.Position == "K")
+                            {
+                                <td>@player.PlayerStats.Sum(x => x.PointsAfterMade)</td>
+                                <td>@player.PlayerStats.Sum(x => x.PointsAfterMiss)</td>
+                                <td>@player.PlayerStats.Sum(x => x.FieldGoal1)</td>
+                                <td>@player.PlayerStats.Sum(x => x.FieldGoal2)</td>
+                                <td>@player.PlayerStats.Sum(x => x.FieldGoal3)</td>
+                                <td>@player.PlayerStats.Sum(x => x.FieldGoal4)</td>
+                                <td>@player.PlayerStats.Sum(x => x.FieldGoal5)</td>
+                            }
+                            @if (player.Position == "DEF")
+                            {
+                                <td>@player.PlayerStats.Sum(x => x.DefensePointsAllowed)</td>
+                                <td>@player.PlayerStats.Sum(x => x.DefenseSacks)</td>
+                                <td>@player.PlayerStats.Sum(x => x.DefenseInterceptions)</td>
+                                <td>@player.PlayerStats.Sum(x => x.DefenseFumbleRecoveries)</td>
+                                <td>@player.PlayerStats.Sum(x => x.DefenseSafeties)</td>
+                                <td>@player.PlayerStats.Sum(x => x.DefenseTouchdowns)</td>
+                                <td>@player.PlayerStats.Sum(x => x.DefenseBlockedKicks)</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="text-center mt-3">
+            <button class="btn btn-outline-secondary me-2" @onclick="PreviousPage" disabled="@(_currentPage == 1)">⬅ Previous</button>
+            <span class="fw-bold">Page @_currentPage of @_totalPages</span>
+            <button class="btn btn-outline-secondary ms-2" @onclick="NextPage" disabled="@(_currentPage == _totalPages)">Next ➡</button>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter] public int GameTypeId { get; set; } = 1; // Default to 1
+    [Parameter] public string? Position { get; set; }
+
+    private bool _loaded = false;
+
+    // Track current selected player for the chosen position
+    private string CurrentPlayerName { get; set; } = "";
+    private string CurrentPlayerImg { get; set; } = "";
+
+    private List<DropdownModel> Positions = new();
+    private List<PlayerModel> PagedPlayers = new();
+
+    private string SearchTerm { get; set; } = "";    
+    private int _currentPage = 1;
+    private int _pageSize = 20;
+    private int _totalPages = 1;
+    private string _sortColumn = "TotalPoints";
+    private bool _sortAscending = false;
+    private System.Timers.Timer _searchTimer;
+    private int _searchDelay = 300; // Delay in milliseconds
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        SearchTerm = e.Value?.ToString() ?? "";
+
+        // Reset the timer on every input
+        _searchTimer?.Stop();
+        _searchTimer = new System.Timers.Timer(_searchDelay);
+        _searchTimer.Elapsed += async (_, __) => await ApplyFilters();
+        _searchTimer.AutoReset = false; // Ensures it only fires once
+        _searchTimer.Start();
+    }
+
+     protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+            await LoadPlayers();
+            StateHasChanged(); // Ensures UI updates after loading
+        }
+    }
+
+    private async Task LoadPlayers()
+    {
+        var userId = await UserService.GetUserIdAsync();
+        int year = await CommonDataService.GetCurrentYearAsync();
+        int week = await CommonDataService.GetCurrentWeekAsync();
+
+        var viewModel = await PlayersService.GetAllPlayersAsync(
+            Position,
+            SearchTerm,
+            userId,
+            1,
+            year,
+            week,
+            _sortColumn,
+            _sortAscending,
+            _currentPage,
+            _pageSize
+        );
+
+        PagedPlayers = viewModel.Players;
+        Positions = viewModel.Positions;
+
+        // Store the user's current player selection for the position
+        CurrentPlayerName = viewModel.CurrentPlayerName ?? "";
+        CurrentPlayerImg = viewModel.CurrentPlayerImg ?? "";
+        _totalPages = (int)Math.Ceiling(viewModel.TotalPlayers / (double)_pageSize);
+    }
+
+    private async Task ApplyFilters()
+    {
+        _searchTimer?.Stop(); // Stop any pending execution
+        _currentPage = 1;
+        await LoadPlayers();
+    }   
+
+    private async Task OnPositionChanged(ChangeEventArgs e)
+    {
+        Position = e.Value?.ToString() ?? "QB"; // Default to QB if empty
+        _currentPage = 1; // Reset to first page
+        await LoadPlayers(); // Refresh the grid
+    }
+
+    private async Task PreviousPage() 
+    { 
+        _currentPage--; 
+        await LoadPlayers(); 
+    }
+
+    private async Task NextPage() 
+    { 
+        _currentPage++; 
+        await LoadPlayers(); 
+    }
+
+    private async Task SortBy(string column)
+    {
+        if (_sortColumn == column)
+        {
+            _sortAscending = !_sortAscending; // Toggle direction
+        }
+        else
+        {
+            _sortColumn = column;
+            _sortAscending = true; // Default to ascending when switching columns
+        }
+
+        await LoadPlayers();
+    }
+
+    private async Task AddPlayer(int playerId)
+    {
+        var userId = await UserService.GetUserIdAsync();
+        int year = await CommonDataService.GetCurrentYearAsync();
+        int week = await CommonDataService.GetCurrentWeekAsync();
+
+        var result = await PlayersService.AddPlayerAsync(userId, playerId, week, year, GameTypeId);
+
+        if (result)
+        {
+            // Optionally show a success message or update UI
+            await LoadPlayers();
+        }
+    }
+}

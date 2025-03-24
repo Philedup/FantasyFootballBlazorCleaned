@@ -1,0 +1,46 @@
+﻿@page "/admin/createnflyear"
+@inject IAdminService AdminService
+@using FantasyFootball.Shared.Services
+@rendermode InteractiveServer
+
+<PageTitle>Create New Year</PageTitle>
+
+<div class="container mt-4">
+    <h3 class="fw-bold text-uppercase">🏈 Create NFL Year</h3>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success">@successMessage</div>
+    }
+
+    <div class="mb-3">
+        <label class="fw-bold">Start Date</label>
+        <input type="date" class="form-control" @bind="StartDate" />
+    </div>
+
+    <button class="btn btn-primary" @onclick="Save">🚀 Create Year</button>
+</div>
+
+@code {
+    private bool _loaded = false;
+    private DateTime StartDate = DateTime.Now;
+    private string successMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+
+            if (!await AdminService.EnsureAdminAccessAsync())
+                return;
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task Save()
+    {
+        successMessage = await AdminService.CreateNflYearAsync(StartDate);
+    }
+}

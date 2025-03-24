@@ -1,0 +1,64 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>aspnet-FantasyFootballBlazor-d82421da-8f10-4a80-b372-969594d1094c</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Data\Models\**" />
+    <Content Remove="Data\Models\**" />
+    <EmbeddedResource Remove="Data\Models\**" />
+    <None Remove="Data\Models\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Services\AdminDataService.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="Components\Account\Pages\Manage\Index.razor" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Data\Models\Entities\Alerts.cs" />
+    <Compile Include="Data\Models\Entities\GameType.cs" />
+    <Compile Include="Data\Models\Entities\LastStatUpdate.cs" />
+    <Compile Include="Data\Models\Entities\LeagueData.cs" />
+    <Compile Include="Data\Models\Entities\NflWeeks.cs" />
+    <Compile Include="Data\Models\Entities\NflYear.cs" />
+    <Compile Include="Data\Models\Entities\Player.cs" />
+    <Compile Include="Data\Models\Entities\PrizePot.cs" />
+    <Compile Include="Data\Models\Entities\Team.cs" />
+    <Compile Include="Data\Models\Entities\TeamSchedule.cs" />
+    <Compile Include="Data\Models\Entities\UserTieBreaker.cs" />
+    <Compile Include="Data\Models\Entities\WeeklyStat.cs" />
+    <Compile Include="Data\Models\Entities\WeeklyUserTeam.cs" />
+    <Compile Include="Data\Models\Entities\WeeklyWinner.cs" />
+    <Compile Include="Data\Models\Entities\YahooToken.cs" />
+    <Compile Include="Data\Models\Entities\YearEndResults.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FantasyFootball.Shared\FantasyFootball.Shared.csproj" />
+    <ProjectReference Include="..\FantasyFootballBlazor.Client\FantasyFootballBlazor.Client.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Components\Pages\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Components\Account\Pages\Logout.razor">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </Content>
+  </ItemGroup>
+
+</Project>

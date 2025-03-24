@@ -1,0 +1,160 @@
+﻿@page "/"
+@inject IFootballDataService FootballDataService
+@inject IAdminService AdminService
+@inject ICommonDataService CommonDataService
+@inject IYahooFootballDataService YahooFootballDataService
+
+@using FantasyFootball.Shared
+@using FantasyFootball.Shared.Services
+@using FantasyFootballBlazor.Client.Components
+@rendermode InteractiveServer
+
+<PageTitle>Phil's Fantasy Football League</PageTitle>
+
+@if (!string.IsNullOrWhiteSpace(Model?.AlertMessage))
+{
+    <div class="alert alert-warning text-center fw-bold shadow-sm">
+        ⚠️ <strong>League Notice:</strong> @Model.AlertMessage
+    </div>
+}
+
+<div class="container mt-4">
+    <div class="text-center mb-4">
+        <h3 class="fw-bold text-uppercase">🏆 Current Week User Picks</h3>
+    </div>
+
+    @if (Model == null)
+    {
+        <!-- 🔄 Loading Spinner -->
+        <div class="text-center my-5">
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Fetching leaderboard data...</p>
+        </div>
+    }
+    else
+    {
+        <!-- Tabs for Weekly & Survivor Picks -->
+        <div class="row mb-3 align-items-center">
+            <div class="col-12">
+                <ul class="nav nav-tabs w-100 d-flex">
+                    <li class="nav-item flex-fill">
+                        <button class="nav-link fw-bold w-100 @(activeTab == "weekly" ? "active bg-purple text-white" : "inactive-tab")"
+                                @onclick='() => activeTab = "weekly"'>
+                            🏈 Weekly
+                        </button>
+                    </li>
+
+                    <li class="nav-item flex-fill">
+                        <button class="nav-link fw-bold w-100 @(activeTab == "survivor" ? "active bg-purple text-white" : "inactive-tab")"
+                                @onclick='() => activeTab = "survivor"'>
+                            💀 Survivor
+                        </button>
+                    </li>
+
+                    <li class="nav-item flex-fill">
+                        <div class="nav-link fw-bold w-100 inactive-tab week-dropdown-wrapper">
+                            <select class="week-dropdown-select"
+                                    @bind-value="SelectedWeek" @bind-value:event="onchange">
+                                @foreach (var option in WeekOptions)
+                                {
+                                    <option value="@option.Value">@option.Text</option>
+                                }
+                            </select>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Leaderboards -->
+        @if (activeTab == "weekly")
+        {
+            <div class="d-none d-md-block">
+                <Leaderboard Title="🏆 Weekly Leaderboard" Players="@Model.CurrentWeekUserPicks" />
+            </div>
+            <div class="d-block d-md-none">
+                <LeaderboardMobile Players="@Model.CurrentWeekUserPicks" />
+            </div>
+        }
+        else if (activeTab == "survivor")
+        {
+            <div class="d-none d-md-block">
+                <Leaderboard Title="💀 Survivor Leaderboard" Players="@Model.SurvivorUserPicks" />
+            </div>
+            <div class="d-block d-md-none">
+                <LeaderboardMobile Players="@Model.SurvivorUserPicks" />
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private bool _loaded = false;
+    private IndexViewModel Model;
+    private string activeTab = "weekly";
+
+    // Week selection properties
+    private int CurrentWeek { get; set; }
+    private int _selectedWeek;
+    private int SelectedWeek
+    {
+        get => _selectedWeek;
+        set
+        {
+            if (_selectedWeek != value)
+            {
+                _selectedWeek = value;
+                // When the selection changes, reload the model
+                _ = OnWeekChanged();
+            }
+        }
+    }
+    private List<DropdownModel> WeekOptions { get; set; } = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+            await InitializeWeeks();
+            await LoadModel();
+            StateHasChanged(); // Ensures UI updates after loading
+        }
+    }
+
+    private async Task InitializeWeeks()
+    {
+        int year = await CommonDataService.GetCurrentYearAsync();
+        // 🧠 Get the current week
+        int fetchedWeek = await CommonDataService.GetCurrentWeekAsync();
+
+        // 🚫 Treat Week 19 as Week 18
+        CurrentWeek = fetchedWeek >= 19 ? 18 : fetchedWeek;
+
+        // Default selected week to current week
+        SelectedWeek = CurrentWeek;
+
+        // Create dropdown options (descending order: current week to 1)
+        WeekOptions = Enumerable.Range(1, CurrentWeek)
+                                .Select(x => new DropdownModel { Text = $"Week {x}", Value = x.ToString() })
+                                .Reverse()
+                                .ToList();
+    }
+
+    private async Task OnWeekChanged()
+    {
+        await LoadModel();
+        StateHasChanged();
+    }
+
+    private async Task LoadModel()
+    {
+        int year = await CommonDataService.GetCurrentYearAsync();
+
+        await YahooFootballDataService.CheckUpdateAsync(CurrentWeek, year, true);
+
+        Model = await FootballDataService.GetIndexViewModelAsync(CurrentWeek, SelectedWeek, year);
+    }
+}

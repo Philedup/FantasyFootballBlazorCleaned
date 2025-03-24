@@ -1,0 +1,208 @@
+﻿@page "/EditProfile"
+@inject IUserService UserService
+@inject NavigationManager NavigationManager
+
+@using FantasyFootball.Shared
+@using FantasyFootball.Shared.Services
+@using System.ComponentModel.DataAnnotations
+
+@rendermode InteractiveServer
+
+<PageTitle>Account Settings</PageTitle>
+<h3 class="fw-bold">Account Settings</h3>
+
+@if (!string.IsNullOrEmpty(StatusMessage))
+{
+    <div class="alert @(StatusMessage.StartsWith("✅") ? "alert-success" : "alert-danger")">
+        @StatusMessage
+    </div>
+}
+
+<!-- Navigation Tabs -->
+<ul class="nav nav-tabs">
+    <li class="nav-item">
+        <button class="nav-link fw-bold p-3 @(ActiveTab == "profile" ? "active bg-primary text-white" : "inactive-tab")"
+                @onclick='() => SetActiveTab("profile")'>
+            👤 Edit Profile
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link fw-bold p-3 @(ActiveTab == "password" ? "active bg-warning text-dark" : "inactive-tab")"
+                @onclick='() => SetActiveTab("password")'>
+            🔑 Change Password
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content mt-3">
+    <!-- Profile Tab -->
+    <div class="tab-pane fade @(ActiveTab == "profile" ? "show active" : "")">
+        <div class="card shadow-sm p-4">
+            <EditForm Model="Input" OnValidSubmit="SaveProfile">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+
+                <!-- Username -->
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.UserName" class="form-control" placeholder="Enter username" />
+                    <label>Username</label>
+                    <ValidationMessage For="() => Input.UserName" class="text-danger" />
+                </div>
+
+                <!-- Email -->
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.Email" class="form-control" placeholder="Enter email" />
+                    <label>Email</label>
+                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+                </div>
+
+                <!-- Team Name -->
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.UserTeamName" class="form-control" placeholder="Enter team name" />
+                    <label>Team Name</label>
+                    <ValidationMessage For="() => Input.UserTeamName" class="text-danger" />
+                </div>
+
+                <!-- PayPal/Venmo -->
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.PaypalEmail" class="form-control" placeholder="Enter PayPal Email or Venmo" />
+                    <label>PayPal Email/ Venmo</label>
+                    <ValidationMessage For="() => Input.PaypalEmail" class="text-danger" />
+                </div>
+
+                <button type="submit" class="w-100 btn btn-lg btn-primary">Save Changes</button>
+            </EditForm>
+        </div>
+    </div>
+
+    <!-- Change Password Tab -->
+    <div class="tab-pane fade @(ActiveTab == "password" ? "show active" : "")">
+        <div class="card shadow-sm p-4">
+            <EditForm Model="PasswordInput" OnValidSubmit="ChangePassword">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+
+                <!-- Old Password -->
+                <div class="form-floating mb-3">
+                    <InputText type="password" @bind-Value="PasswordInput.OldPassword" class="form-control" placeholder="Enter current password" />
+                    <label>Current Password</label>
+                    <ValidationMessage For="() => PasswordInput.OldPassword" class="text-danger" />
+                </div>
+
+                <!-- New Password -->
+                <div class="form-floating mb-3">
+                    <InputText type="password" @bind-Value="PasswordInput.NewPassword" class="form-control" placeholder="Enter new password" />
+                    <label>New Password</label>
+                    <ValidationMessage For="() => PasswordInput.NewPassword" class="text-danger" />
+                </div>
+
+                <!-- Confirm New Password -->
+                <div class="form-floating mb-3">
+                    <InputText type="password" @bind-Value="PasswordInput.ConfirmPassword" class="form-control" placeholder="Confirm new password" />
+                    <label>Confirm Password</label>
+                    <ValidationMessage For="() => PasswordInput.ConfirmPassword" class="text-danger" />
+                </div>
+
+                <button type="submit" class="w-100 btn btn-lg btn-primary">Update Password</button>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _loaded = false;
+    private string? StatusMessage;
+    private string ActiveTab = "profile"; // Default to Profile tab
+    private EditProfileModel Input = new();
+    private ChangePasswordModel PasswordInput = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+            await LoadUserProfile();
+            StateHasChanged(); // Ensure UI updates
+        }
+    }
+
+    private async Task LoadUserProfile()
+    {
+        var user = await UserService.GetCurrentUserAsync();
+        if (user == null)
+        {
+            NavigationManager.NavigateTo("/Account/Login", forceLoad: true);
+            return;
+        }
+
+        // Pre-fill profile form with existing user data
+        Input = new EditProfileModel
+            {
+                UserName = user.UserName ?? "",
+                Email = user.Email ?? "",
+                UserTeamName = user.UserTeamName ?? "",
+                PaypalEmail = user.PaypalEmail ?? ""
+            };
+    }
+
+    private void SetActiveTab(string tabName)
+    {
+        ActiveTab = tabName;
+    }
+
+    private async Task SaveProfile()
+    {
+        StatusMessage = "";
+
+        var user = await UserService.GetCurrentUserAsync();
+        if (user == null)
+        {
+            StatusMessage = "❌ User not found.";
+            return;
+        }
+
+        if (!await UserService.IsUsernameUniqueAsync(Input.UserName, user.UserId))
+        {
+            StatusMessage = "❌ Username is already taken.";
+            return;
+        }
+
+        if (!await UserService.IsEmailUniqueAsync(Input.Email, user.UserId))
+        {
+            StatusMessage = "❌ Email is already taken.";
+            return;
+        }
+
+        var result = await UserService.UpdateUserProfileAsync(Input);
+        StatusMessage = result ? "✅ Profile updated successfully!" : "❌ Failed to update profile.";
+    }
+
+    private async Task ChangePassword()
+    {
+        StatusMessage = "";
+
+        if (string.IsNullOrWhiteSpace(PasswordInput.OldPassword) ||
+            string.IsNullOrWhiteSpace(PasswordInput.NewPassword) ||
+            string.IsNullOrWhiteSpace(PasswordInput.ConfirmPassword))
+        {
+            StatusMessage = "❌ All password fields are required.";
+            return;
+        }
+
+        if (PasswordInput.NewPassword != PasswordInput.ConfirmPassword)
+        {
+            StatusMessage = "❌ New password and confirmation do not match.";
+            return;
+        }
+
+        var user = await UserService.GetCurrentUserAsync();
+        if (user == null)
+        {
+            StatusMessage = "❌ User not found.";
+            return;
+        }
+
+        var result = await UserService.ChangePasswordAsync(user.UserId, PasswordInput.OldPassword, PasswordInput.NewPassword);
+        StatusMessage = result ? "✅ Password changed successfully!" : "❌ Failed to update password.";
+    }
+}

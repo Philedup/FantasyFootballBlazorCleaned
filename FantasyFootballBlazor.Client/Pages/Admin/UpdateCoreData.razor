@@ -1,0 +1,59 @@
+﻿@page "/admin/updatecore"
+@inject IYahooFootballDataService YahooDataService
+@inject ICommonDataService CommonDataService
+@inject IAdminService AdminService
+@using FantasyFootball.Shared.Services
+@using FantasyFootball.Shared
+
+<PageTitle>Update Core Data</PageTitle>
+
+<div class="container mt-4">
+    <h3 class="fw-bold text-uppercase">🔄 Update Core Data</h3>
+
+    @if (!string.IsNullOrEmpty(Message))
+    {
+        <div class="alert alert-danger">@Message</div>
+    }
+
+    <div class="form-group">
+        <label class="fw-bold">Select Position</label>
+        <select class="form-control" @bind="SelectedPosition">
+            @foreach (var position in Positions)
+            {
+                <option value="@position.Value">@position.Text</option>
+            }
+        </select>
+    </div>
+
+    <button class="btn btn-primary mt-3" @onclick="Save">⚡ Update</button>
+</div>
+
+@code {
+    private List<DropdownModel> Positions = new();
+    private string SelectedPosition;
+    private string Message;
+    private bool _loaded = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+
+            if (!await AdminService.EnsureAdminAccessAsync()) return;
+
+            Positions = CommonDataService.GetPlayerPositions();
+            if (Positions.Any())
+            {
+                SelectedPosition = Positions.First().Value;
+            }
+
+            StateHasChanged(); // Ensure UI updates
+        }
+    }
+
+    private async Task Save()
+    {
+        Message = await YahooDataService.UpdateCoreDataAsync(SelectedPosition);
+    }
+}

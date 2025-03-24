@@ -1,0 +1,54 @@
+﻿@namespace FantasyFootballBlazor.Client.Components
+@using FantasyFootball.Shared
+
+<div class="d-block d-md-none">
+    @foreach (var (pick, index) in Players.OrderByDescending(p => p.PlayerTotalPoints).Select((p, i) => (p, i + 1)))
+    {
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-purple text-white text-center">
+                <h5 class="mb-0">🏅 #@index - @pick.UserName</h5>
+            </div>
+            <div class="card-body">
+                <div class="container">
+                    <div class="row g-2 text-center">
+                        <div class="col-4 fw-bold bg-gradient-purple p-2 border rounded">Pos</div>
+                        <div class="col-4 fw-bold bg-gradient-purple p-2 border rounded">Player</div>
+                        <div class="col-4 fw-bold bg-gradient-purple p-2 border rounded">PTS</div>
+
+                        <div class="col-4 bg-light p-2"><strong>QB</strong></div>
+                        <div class="col-4 bg-light p-2"><RenderPlayerName FirstName="@pick.QuarterBackFirstName" LastName="@pick.QuarterBackLastName" /></div>
+                        <div class="col-4 bg-light p-2 fw-bold text-dark">@pick.QuarterBackTotalPoints</div>
+
+                        <div class="col-4 bg-white p-2"><strong>RB</strong></div>
+                        <div class="col-4 bg-white p-2"><RenderPlayerName FirstName="@pick.RunningBackFirstName" LastName="@pick.RunningBackLastName" /></div>
+                        <div class="col-4 bg-white p-2 fw-bold text-dark">@pick.RunningBackTotalPoints</div>
+
+                        <div class="col-4 bg-light p-2"><strong>WR</strong></div>
+                        <div class="col-4 bg-light p-2"><RenderPlayerName FirstName="@pick.WideReceiverFirstName" LastName="@pick.WideReceiverLastName" /></div>
+                        <div class="col-4 bg-light p-2 fw-bold text-dark">@pick.WideReceiverTotalPoints</div>
+
+                        <div class="col-4 bg-white p-2"><strong>TE</strong></div>
+                        <div class="col-4 bg-white p-2"><RenderPlayerName FirstName="@pick.TightEndFirstName" LastName="@pick.TightEndLastName" /></div>
+                        <div class="col-4 bg-white p-2 fw-bold text-dark">@pick.TightEndTotalPoints</div>
+
+                        <div class="col-4 bg-light p-2"><strong>K</strong></div>
+                        <div class="col-4 bg-light p-2"><RenderPlayerName FirstName="@pick.KickerFirstName" LastName="@pick.KickerLastName" /></div>
+                        <div class="col-4 bg-light p-2 fw-bold text-dark">@pick.KickerTotalPoints</div>
+
+                        <div class="col-4 bg-white p-2"><strong>DEF</strong></div>
+                        <div class="col-4 bg-white p-2"> <RenderPlayerName FirstName="@pick.DefenseName" LastName="@pick.DefenseName" IsDefense="true" /></div>
+                        <div class="col-4 bg-white p-2 fw-bold text-dark">@pick.DefenseTotalPoints</div>
+
+                        <div class="col-12 alert-primary fw-bold p-3 mt-2 rounded border border-dark">
+                            Total Points: @pick.PlayerTotalPoints
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<WeeklyPicksModel> Players { get; set; } = new();
+}
