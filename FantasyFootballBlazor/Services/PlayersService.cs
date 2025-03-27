@@ -229,87 +229,6 @@ namespace FantasyFootballBlazor.Services
         }
 
         /// <summary>
-        /// Asynchronously fetches players and their stats for a given year, with optional filtering by position.
-        /// </summary>
-        /// <param name="positionFilter">The position to filter players by (e.g., "QB", "RB", etc.). If null or empty, no position filtering is applied.</param>
-        /// <param name="year">The year for which stats should be retrieved.</param>
-        /// <returns>A list of <see cref="PlayerModel"/> objects containing player details and their filtered stats.</returns>
-        private async Task<List<PlayerModel>> GetPlayersWithStatsAsync(string positionFilter, int year)
-        {
-            await using var context = _dbContextFactory.CreateDbContext();
-
-            // Step 1: Query all players with optional position filtering
-            var playersQuery = context.Players
-                .Include(p => p.WeeklyStats) // Include weekly stats but filter later in-memory
-                .AsNoTracking()
-                .Where(x =>
-                    x.LastUpdatedDateTime != null &&
-                    (string.IsNullOrEmpty(positionFilter) || x.Position == positionFilter) &&
-                    x.TeamId > 0); // Ensure players are assigned to a valid team
-
-            // Step 2: Fetch players into memory first (allows LINQ-to-Objects filtering)
-            var playersList = await playersQuery.ToListAsync();
-
-            // Step 3: Process players and filter stats in-memory
-            var players = playersList
-                .Select(x => new PlayerModel
-                {
-                    PlayerId = x.PlayerId,
-                    Position = x.Position,
-                    First = x.First,
-                    FullName = x.FullName,
-                    Last = x.Last,
-                    TeamId = x.TeamId,
-
-                    // Apply filtering on WeeklyStats AFTER loading into memory (EF optimization)
-                    PlayerStats = x.WeeklyStats
-                        .Where(s => s.Year == year) // Only include stats for the selected year
-                        .Select(s => new WeeklyStatModel
-                        {
-                            PassingYards = s.PassingYards,
-                            PassingTouchdowns = s.PassingTouchdowns,
-                            PassingInterceptions = s.PassingInterceptions,
-                            PassingSacks = s.PassingSacks,
-                            RushingYards = s.RushingYards,
-                            RushingTouchdowns = s.RushingTouchdowns,
-                            ReceptionYards = s.ReceptionYards,
-                            ReceptionTouchdowns = s.ReceptionTouchdowns,
-                            ReturnYards = s.ReturnYards,
-                            ReturnTouchdowns = s.ReturnTouchdowns,
-                            DefenseSacks = s.DefenseSacks,
-                            DefenseInterceptions = s.DefenseInterceptions,
-                            DefenseFumbleRecoveries = s.DefenseFumbleRecoveries,
-                            DefensePointsAllowed = s.DefensePointsAllowed,
-                            DefenseSafeties = s.DefenseSafeties,
-                            DefenseTouchdowns = s.DefenseTouchdowns,
-                            DefenseBlockedKicks = s.DefenseBlockedKicks,
-                            FieldGoal1 = s.FieldGoal1,
-                            FieldGoal2 = s.FieldGoal2,
-                            FieldGoal3 = s.FieldGoal3,
-                            FieldGoal4 = s.FieldGoal4,
-                            FieldGoal5 = s.FieldGoal5,
-                            FieldGoalMiss1 = s.FieldGoalMiss1,
-                            FieldGoalMiss2 = s.FieldGoalMiss2,
-                            PointsAfterMade = s.PointsAfterMade,
-                            PointsAfterMiss = s.PointsAfterMiss,
-                            TwoPointConversions = s.TwoPointConversions,
-                            TotalPoints = s.TotalPoints,
-                            Week = s.Week,
-                            Year = s.Year
-                        }).ToList(),
-
-                    // Compute TotalPoints in-memory to avoid EF query conversion issues
-                    TotalPoints = x.WeeklyStats
-                        .Where(ws => ws.Year == year)
-                        .Sum(ws => ws.TotalPoints ?? 0)
-                })
-                .OrderByDescending(x => x.TotalPoints) // Sort players by total points
-                .ToList();
-
-            return players;
-        }
-
-        /// <summary>
         /// Retrieves a list of available player positions for dropdown selection.
         /// </summary>
         /// <returns>A list of <see cref="DropdownModel"/> containing position names and values.</returns>
@@ -434,7 +353,7 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // Survivor picks can only be added for week 1
+            //Survivor picks can only be added for week 1
             if (week != 1)
                 return;
 
@@ -447,14 +366,14 @@ namespace FantasyFootballBlazor.Services
             if (player == null || teamLockStatuses == null)
                 return;
 
-            // Check if the player's team is locked
+            //Check if the player's team is locked
             var playerTeamStatus = teamLockStatuses
                 .FirstOrDefault(x => x.TeamId == player.TeamId)
                 ?.IsLocked ?? true;
 
             if (!playerTeamStatus)
             {
-                // Check if the user has already picked a player for this position
+                //Check if the user has already picked a player for this position
                 var userPick = await context.WeeklyUserTeams
                     .FirstOrDefaultAsync(x =>
                         x.Year == year &&
@@ -466,7 +385,7 @@ namespace FantasyFootballBlazor.Services
 
                 if (userPick != null)
                 {
-                    // Check if the old pick's team is locked
+                    //Check if the old pick's team is locked
                     var oldPickTeamId = await context.Players
                         .AsNoTracking()
                         .Where(p => p.PlayerId == userPick.PlayerId)
@@ -479,10 +398,10 @@ namespace FantasyFootballBlazor.Services
 
                     if (!userPickLocked)
                     {
-                        // Remove existing survivor picks for this position
+                        //Remove existing survivor picks for this position
                         await DeleteSurvivorPicksAsync(year, userId, player.Position);
 
-                        // Add new picks for all 18 weeks
+                        //Add new picks for all 18 weeks
                         for (int i = 1; i <= 18; i++)
                         {
                             await InsertNewPickAsync(playerId, i, year, userId, player, 2);
@@ -491,10 +410,10 @@ namespace FantasyFootballBlazor.Services
                 }
                 else
                 {
-                    // Ensure any old survivor picks for this position are removed
+                    //Ensure any old survivor picks for this position are removed
                     await DeleteSurvivorPicksAsync(year, userId, player.Position);
 
-                    // Add new picks for all 18 weeks
+                    //Add new picks for all 18 weeks
                     for (int i = 1; i <= 18; i++)
                     {
                         await InsertNewPickAsync(playerId, i, year, userId, player, 2);
@@ -513,14 +432,14 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // Find all survivor picks matching the user, year, and position
+            //Find all survivor picks matching the user, year, and position
             var removeSurvivorPicks = context.WeeklyUserTeams
                 .Where(x => x.UserId == userId &&
-                            x.GameTypeId == 2 && // Only delete picks for the Survivor game type
+                            x.GameTypeId == 2 && //Only delete picks for the Survivor game type
                             x.Year == year &&
                             x.Position == position);
 
-            // Remove the matched survivor picks from the database
+            //Remove the matched survivor picks from the database
             context.WeeklyUserTeams.RemoveRange(removeSurvivorPicks);
             await context.SaveChangesAsync();
         }

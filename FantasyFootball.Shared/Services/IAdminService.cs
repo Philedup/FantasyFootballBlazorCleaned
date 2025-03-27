@@ -12,8 +12,6 @@
         Task<ScheduleAdminViewModel> GetScheduleAdminViewModelAsync(int week);
         Task<ScheduleAdminListViewModel> CreateScheduleListViewModelAsync();
         Task<bool> SaveScheduleAsync(ScheduleAdminViewModel model);
-        Task<UserModel> CreateEditModelAsync(string userId);
-        Task<bool> ProcessEditModelAsync(UserModel model);
         Task<bool> UpdateUserPaidAsync(string userId, bool paid);
         Task<bool> UpdateUserSurvivorAsync(string userId, bool paid);
         Task<WeeklyWinnersViewModel> GetWeeklyWinnersViewModelAsync(int year, int week);
@@ -21,7 +19,6 @@
         Task<bool> DeleteScheduledGameAsync(int id);
         Task<bool> UpdateGameTiebreakAsync(int id);
         Task<EmailLeagueViewModel> SendEmailToLeagueAsync(EmailLeagueViewModel model);
-        Task<bool> UpdateTieBreakScoresAsync(int scheduleId, int? homeScore, int? awayScore);
         Task<UpdateAlertsViewModel> GetAlertsViewModelAsync();
         Task UpdateAlertAsync(string indexPageAlert, string myTeamPageAlert);
     }

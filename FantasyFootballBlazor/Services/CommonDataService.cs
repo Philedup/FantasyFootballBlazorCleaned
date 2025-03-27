@@ -25,7 +25,7 @@ namespace FantasyFootballBlazor.Services
         /// </returns>
         public List<DropdownModel> GetPlayerPositions()
         {
-            // Predefined list of player positions as dropdown options
+            //Predefined list of player positions as dropdown options
             var positions = new List<DropdownModel>
             {
                 new DropdownModel {Text = "QB", Value = "QB"},  // Quarterback
@@ -36,7 +36,7 @@ namespace FantasyFootballBlazor.Services
                 new DropdownModel {Text = "DEF", Value = "DEF"} // Defense
             };
 
-            // Return the view model with available positions
+            //Return the view model with available positions
             return positions;
         }
 

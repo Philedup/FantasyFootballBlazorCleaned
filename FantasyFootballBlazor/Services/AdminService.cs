@@ -56,19 +56,19 @@ namespace FantasyFootballBlazor.Services
 
             int currentYear = DateTime.Now.Year;
 
-            // Loop through 19 weeks, creating an NFL week entry for each
+            //Loop through 19 weeks, creating an NFL week entry for each
             for (int week = 0; week < 19; week++)
             {
                 context.NflWeeks.Add(new NflWeek
                 {
                     Year = currentYear,
-                    StartDate = startDate.AddDays(week * 7), // Each week starts 7 days after the previous one
-                    Name = week + 1 // Week numbers start from 1 up to 19
+                    StartDate = startDate.AddDays(week * 7), //Each week starts 7 days after the previous one
+                    Name = week + 1 //Week numbers start from 1 up to 19
                 });
             }
 
-            await context.SaveChangesAsync(); // Save all new weeks to the database
-            return "Done"; // Return confirmation of successful execution
+            await context.SaveChangesAsync(); //Save all new weeks to the database
+            return "Done"; //Return confirmation of successful execution
         }
 
 
@@ -85,12 +85,12 @@ namespace FantasyFootballBlazor.Services
 
             try
             {
-                // Fetch all yearly end results and map them to YearlyUserRankingModel
+                //Fetch all yearly end results and map them to YearlyUserRankingModel
                 var yearlyList = await context.YearEndResults
-                    .Include(x => x.UserProfile) // Include user profile data
-                    .Include(x => x.GameType) // Include game type data
+                    .Include(x => x.UserProfile) //Include user profile data
+                    .Include(x => x.GameType) //Include game type data
                     .OrderByDescending(x => x.YearEndResultId) //✅ Order by descending id to see latest entered
-                    .AsNoTracking() // Improves performance since we are only reading data
+                    .AsNoTracking() //Improves performance since we are only reading data
                     .Select(x => new YearlyUserRankingModel
                     {
                         Rank = x.Rank,
@@ -99,13 +99,13 @@ namespace FantasyFootballBlazor.Services
                         TotalPoints = x.TotalPoints,
                         UserName = !string.IsNullOrEmpty(x.UserProfile.UserTeamName)
                             ? $"{x.UserProfile.UserName} ({x.UserProfile.UserTeamName})"
-                            : x.UserProfile.UserName, // Append team name if available
-                        GameMode = x.GameType.Name, // Game type for the ranking
-                        GameTypeId = x.GameTypeId, // GameTypeId
+                            : x.UserProfile.UserName, //Append team name if available
+                        GameMode = x.GameType.Name, //Game type for the ranking
+                        GameTypeId = x.GameTypeId, //GameTypeId
                         UserId = x.UserId
                     }).ToListAsync();
 
-                // Fetch available game types for dropdown
+                //Fetch available game types for dropdown
                 var gameTypeList = await context.GameTypes
                     .AsNoTracking()
                     .Select(x => new DropdownModel
@@ -114,7 +114,7 @@ namespace FantasyFootballBlazor.Services
                         Value = x.GameTypeId.ToString()
                     }).ToListAsync();
 
-                // Fetch paid users for dropdown selection
+                //Fetch paid users for dropdown selection
                 var userList = await context.ApplicationUsers
                     .AsNoTracking()
                     .Where(x => x.Paid == true)
@@ -125,20 +125,20 @@ namespace FantasyFootballBlazor.Services
                         Value = x.Id
                     }).ToListAsync();
 
-                // Fetch the latest NFL year
+                //Fetch the latest NFL year
                 var latestYear = await context.NflYears
                     .AsNoTracking()
                     .OrderByDescending(x => x.NflYearId)
                     .Select(x => x.NflYearId)
                     .FirstOrDefaultAsync();
 
-                // Ensure there's a valid NFL year, otherwise default to the current year
+                //Ensure there's a valid NFL year, otherwise default to the current year
                 if (latestYear == 0)
                 {
                     latestYear = DateTime.UtcNow.Year;
                 }
 
-                // Return the formatted data inside a view model
+                //Return the formatted data inside a view model
                 return new YearlyUserDataViewModel
                 {
                     AddPlayer = new AddYearlyPlayerRankingModel
@@ -180,7 +180,7 @@ namespace FantasyFootballBlazor.Services
 
             try
             {
-                // Check if an entry already exists for the given year, game type, and user
+                //Check if an entry already exists for the given year, game type, and user
                 var existingRecord = await context.YearEndResults
                     .FirstOrDefaultAsync(x => x.Year == data.AddPlayer.Year &&
                                               x.GameTypeId == data.AddPlayer.GameTypeId &&
@@ -188,14 +188,14 @@ namespace FantasyFootballBlazor.Services
 
                 if (existingRecord != null)
                 {
-                    // Update existing record
+                    //Update existing record
                     existingRecord.Rank = data.AddPlayer.Rank;
                     existingRecord.TotalEarned = data.AddPlayer.TotalEarned;
                     existingRecord.TotalPoints = data.AddPlayer.TotalPoints;
                 }
                 else
                 {
-                    // Insert new record if no existing entry is found
+                    //Insert new record if no existing entry is found
                     context.YearEndResults.Add(new YearEndResults
                     {
                         Rank = data.AddPlayer.Rank,
@@ -207,7 +207,7 @@ namespace FantasyFootballBlazor.Services
                     });
                 }
 
-                // Save changes to the database
+                //Save changes to the database
                 await context.SaveChangesAsync();
                 return true; // Success
             }
@@ -231,7 +231,7 @@ namespace FantasyFootballBlazor.Services
 
             try
             {
-                // Find the record to delete
+                //Find the record to delete
                 var record = await context.YearEndResults
                     .FirstOrDefaultAsync(x => x.UserId == userId && x.Year == year && x.GameTypeId == gameTypeId);
 
@@ -241,7 +241,7 @@ namespace FantasyFootballBlazor.Services
                     return false; // No record to delete
                 }
 
-                // Remove the record from the database
+                //Remove the record from the database
                 context.YearEndResults.Remove(record);
                 await context.SaveChangesAsync();
 
@@ -268,22 +268,22 @@ namespace FantasyFootballBlazor.Services
             {
                 await using var context = _dbContextFactory.CreateDbContext();
 
-                // Fetch users from the database, ensuring no tracking for performance optimization
+                //Fetch users from the database, ensuring no tracking for performance optimization
                 var users = await context.ApplicationUsers
                     .AsNoTracking()
                     .Select(x => new UserModel
                     {
-                        Email = x.Email,                  // User's registered email
-                        Paid = x.Paid == true,            // Payment status (true if paid)
-                        PaypalEmail = x.PaypalEmail,      // User's PayPal email
-                        Survival = x.Survival == true,    // Indicates if the user is in survival mode
-                        UserId = x.Id,                    // Unique user ID
-                        UserName = x.UserName,            // Username
-                        UserTeamName = x.UserTeamName     // User's chosen team name
+                        Email = x.Email,                  //User's registered email
+                        Paid = x.Paid == true,            //Payment status (true if paid)
+                        PaypalEmail = x.PaypalEmail,      //User's PayPal email
+                        Survival = x.Survival == true,    //Indicates if the user is in survival mode
+                        UserId = x.Id,                    //Unique user ID
+                        UserName = x.UserName,            //Username
+                        UserTeamName = x.UserTeamName     //User's chosen team name
                     })
                     .ToListAsync();
 
-                // Construct the view model
+                //Construct the view model
                 var list = new UserListViewModel
                 {
                     Users = users
@@ -293,7 +293,7 @@ namespace FantasyFootballBlazor.Services
             }
             catch (Exception ex)
             {
-                // Log the error and rethrow for better debugging
+                //Log the error and rethrow for better debugging
                 Console.WriteLine($"Error: {ex.Message}");
                 throw;
             }
@@ -308,7 +308,7 @@ namespace FantasyFootballBlazor.Services
         /// </returns>
         public UpdateWeeklyDataViewModel CreateUpdateWeeklyDataViewModel()
         {
-            // Predefined list of weeks (1-18) as dropdown options
+            //Predefined list of weeks (1-18) as dropdown options
             var weeks = new List<DropdownModel>
             {
                 new DropdownModel {Text = "1", Value = "1"},
@@ -331,7 +331,7 @@ namespace FantasyFootballBlazor.Services
                 new DropdownModel {Text = "18", Value = "18"},
             };
 
-            // Return the view model with the available weeks
+            //Return the view model with the available weeks
             return new UpdateWeeklyDataViewModel
             {
                 Weeks = weeks
@@ -350,32 +350,32 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // Fetch the current NFL year from a shared service
+            //Fetch the current NFL year from a shared service
             var year = await _commonDataService.GetCurrentYearAsync();
 
-            // Retrieve all NFL teams
+            //Retrieve all NFL teams
             var teams = await context.Teams
                 .AsNoTracking()
                 .ToListAsync();
 
-            // Retrieve data for the specified week and year
+            //Retrieve data for the specified week and year
             var weekData = await context.NflWeeks
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.Name == week && x.Year == year);
 
-            // Get all scheduled games for the given week and year
+            //Get all scheduled games for the given week and year
             var scheduledGames = await context.TeamSchedules
                 .Where(x => x.Week == week && x.Year == year)
                 .AsNoTracking()
                 .ToListAsync();
 
-            // Determine which teams are already scheduled
+            //Determine which teams are already scheduled
             var scheduledTeamIds = scheduledGames
                 .SelectMany(x => new[] { x.HomeTeamId, x.AwayTeamId })
                 .Distinct()
                 .ToList();
 
-            // Create dropdown lists for teams that have not yet been scheduled
+            //Create dropdown lists for teams that have not yet been scheduled
             var unscheduledTeams = teams
                 .Where(t => !scheduledTeamIds.Contains(t.TeamId))
                 .Select(t => new DropdownModel
@@ -386,11 +386,11 @@ namespace FantasyFootballBlazor.Services
                 .OrderBy(t => t.Text)
                 .ToList();
 
-            // Assign the unscheduled teams list for both home and away team selection
+            //Assign the unscheduled teams list for both home and away team selection
             var homeTeams = unscheduledTeams;
             var awayTeams = unscheduledTeams;
 
-            // Build the list of already scheduled games
+            //Build the list of already scheduled games
             var scheduledGamesList = scheduledGames
                 .Select(x => new ScheduleAdminModel
                 {
@@ -408,7 +408,7 @@ namespace FantasyFootballBlazor.Services
                 .OrderBy(x => x.ScheduleId)
                 .ToList();
 
-            // Construct and return the view model
+            //Construct and return the view model
             return new ScheduleAdminViewModel
             {
                 Week = week,
@@ -437,25 +437,25 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // Fetch the current NFL year from a shared service
+            //Fetch the current NFL year from a shared service
             var year = await _commonDataService.GetCurrentYearAsync();
 
-            // Retrieve all scheduled games for the given year asynchronously
+            //Retrieve all scheduled games for the given year asynchronously
             var schedules = await context.TeamSchedules
                 .AsNoTracking()
                 .Where(x => x.Year == year)
                 .ToListAsync();
 
-            // Retrieve all NFL weeks for the given year asynchronously
+            //Retrieve all NFL weeks for the given year asynchronously
             var weeks = await context.NflWeeks
                 .AsTracking()
                 .Where(x => x.Year == year)
                 .ToListAsync();
 
-            // Initialize a list to store weekly schedule summaries
+            //Initialize a list to store weekly schedule summaries
             var returnWeek = new List<ScheduleAdminWeekModel>();
 
-            // Iterate through each week and count the scheduled games
+            //Iterate through each week and count the scheduled games
             foreach (var week in weeks)
             {
                 returnWeek.Add(new ScheduleAdminWeekModel
@@ -467,7 +467,7 @@ namespace FantasyFootballBlazor.Services
                 });
             }
 
-            // Construct and return the final view model
+            //Construct and return the final view model
             return new ScheduleAdminListViewModel
             {
                 Week = returnWeek
@@ -489,7 +489,7 @@ namespace FantasyFootballBlazor.Services
             {
                 await using var context = _dbContextFactory.CreateDbContext();
 
-                // Create a new TeamSchedule entity with data from the provided model
+                //Create a new TeamSchedule entity with data from the provided model
                 var game = new TeamSchedule
                 {
                     Week = model.Week, // The week number of the game
@@ -502,11 +502,11 @@ namespace FantasyFootballBlazor.Services
                     TieBreakGame = model.TieBreakGame // Indicates if this game is a tiebreaker
                 };
 
-                // Add the new game to the database and persist changes asynchronously
+                //Add the new game to the database and persist changes asynchronously
                 context.TeamSchedules.Add(game);
                 await context.SaveChangesAsync();
 
-                return true; // Success: Schedule saved successfully
+                return true; //Success: Schedule saved successfully
             }
             catch (Exception ex)
             {
@@ -514,38 +514,6 @@ namespace FantasyFootballBlazor.Services
                 Console.Error.WriteLine($"Error saving schedule: {ex.Message}");
                 return false; // ❌ Failure: An error occurred
             }
-        }
-
-        /// <summary>
-        /// Asynchronously retrieves a user’s editable profile details for editing.
-        /// </summary>
-        /// <param name="userId">
-        /// The unique identifier of the user whose information is being retrieved.
-        /// </param>
-        /// <returns>
-        /// A <see cref="Task{UserModel}"/> representing the asynchronous operation, 
-        /// containing the user’s editable details if found; otherwise, null.
-        /// </returns>
-        public async Task<UserModel> CreateEditModelAsync(string userId)
-        {
-            await using var context = _dbContextFactory.CreateDbContext();
-
-            // Query the database for the specified user while ensuring no tracking for performance
-            var user = await context.ApplicationUsers
-                .AsNoTracking()
-                .Select(x => new UserModel
-                {
-                    Email = x.Email,             // User's email address
-                    UserTeamName = x.UserTeamName, // User's team name (if applicable)
-                    Paid = x.Paid == true,        // Indicates if the user has completed payment
-                    PaypalEmail = x.PaypalEmail,  // PayPal email address for transactions
-                    Survival = x.Survival == true,// Indicates participation in survival mode
-                    UserId = x.Id,                // Unique identifier of the user
-                    UserName = x.UserName         // Display name of the user
-                })
-                .FirstOrDefaultAsync(x => x.UserId == userId); // Retrieves the user matching the given ID
-
-            return user; // Returns the user model or null if not found
         }
 
         /// <summary>
@@ -562,24 +530,24 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // Fetch the user from the database based on the provided UserId
+            //Fetch the user from the database based on the provided UserId
             var user = await context.ApplicationUsers
                 .FirstOrDefaultAsync(m => m.Id == model.UserId);
 
-            // If the user is not found, return false
+            //If the user is not found, return false
             if (user == null)
                 return false;
 
-            // Update user properties with new values
+            //Update user properties with new values
             user.PaypalEmail = model.PaypalEmail; // Update PayPal email
             user.Survival = model.Survival;       // Update survival mode participation
             user.Paid = model.Paid;               // Update payment status
 
-            // Mark the entity as modified and save changes asynchronously
+            //Mark the entity as modified and save changes asynchronously
             context.ApplicationUsers.Update(user);
             await context.SaveChangesAsync();
 
-            return true; // Indicate success
+            return true; //Indicate success
         }
 
         /// <summary>
@@ -599,20 +567,20 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // Retrieve the user based on the provided UserId
+            //Retrieve the user based on the provided UserId
             var user = await context.ApplicationUsers.FirstOrDefaultAsync(m => m.Id == userId);
 
-            // Return false if the user is not found
+            //Return false if the user is not found
             if (user == null)
             {
                 return false;
             }
 
-            // Update the user's 'Paid' status
+            //Update the user's 'Paid' status
             user.Paid = paid;
             context.ApplicationUsers.Update(user);
 
-            // Save changes asynchronously and return true upon success
+            //Save changes asynchronously and return true upon success
             await context.SaveChangesAsync();
             return true;
         }
@@ -634,20 +602,20 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // Retrieve the user based on the provided UserId
+            //Retrieve the user based on the provided UserId
             var user = await context.ApplicationUsers.FirstOrDefaultAsync(m => m.Id == userId);
 
-            // Return false if the user is not found
+            //Return false if the user is not found
             if (user == null)
             {
                 return false;
             }
 
-            // Update the user's 'Survival' status
+            //Update the user's 'Survival' status
             user.Survival = survival;
             context.ApplicationUsers.Update(user);
 
-            // Save changes asynchronously and return true upon success
+            //Save changes asynchronously and return true upon success
             await context.SaveChangesAsync();
             return true;
         }
@@ -672,7 +640,7 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // Retrieve weekly winners for the specified year and week
+            //Retrieve weekly winners for the specified year and week
             var weeklyWinners = await context.WeeklyWinners
                 .AsNoTracking()
                 .Where(x => x.Year == year && x.Week == week)
@@ -685,7 +653,7 @@ namespace FantasyFootballBlazor.Services
                 })
                 .ToListAsync();
 
-            // Retrieve a list of users who have paid, formatted for dropdown selection
+            //Retrieve a list of users who have paid, formatted for dropdown selection
             var paidUsers = await context.ApplicationUsers
                 .AsNoTracking()
                 .Where(x => x.Paid == true)
@@ -697,7 +665,7 @@ namespace FantasyFootballBlazor.Services
                 })
                 .ToListAsync();
 
-            // Construct and return the view model
+            //Construct and return the view model
             var vm = new WeeklyWinnersViewModel
             {
                 Place = weeklyWinners.Count + 1, // Next available place number
@@ -725,18 +693,18 @@ namespace FantasyFootballBlazor.Services
             {
                 await using var context = _dbContextFactory.CreateDbContext();
 
-                // Check if a winner already exists for this week, year, and place
+                //Check if a winner already exists for this week, year, and place
                 var existingWinner = await context.WeeklyWinners
                     .FirstOrDefaultAsync(w => w.Year == model.Year && w.Week == model.Week && w.Place == model.Place);
 
                 if (existingWinner != null)
                 {
-                    // Update existing record with the new user ID
+                    //Update existing record with the new user ID
                     existingWinner.UserId = model.UserId;
                 }
                 else
                 {
-                    // Insert a new record if no existing winner is found
+                    //Insert a new record if no existing winner is found
                     var winner = new WeeklyWinner
                     {
                         Year = model.Year,
@@ -748,9 +716,9 @@ namespace FantasyFootballBlazor.Services
                     context.WeeklyWinners.Add(winner);
                 }
 
-                // Save changes asynchronously
+                //Save changes asynchronously
                 await context.SaveChangesAsync();
-                return true; // Success
+                return true; //Success
             }
             catch (Exception ex)
             {
@@ -773,19 +741,19 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // Attempt to find the scheduled game by ID
+            //Attempt to find the scheduled game by ID
             var game = await context.TeamSchedules
                 .FirstOrDefaultAsync(x => x.TeamScheduleId == id);
 
             if (game == null)
                 return false; // ❌ Game not found, return false
 
-            // Remove the game from the database
+            //Remove the game from the database
             context.TeamSchedules.Remove(game);
 
-            // Save changes asynchronously
+            //Save changes asynchronously
             await context.SaveChangesAsync();
-            return true; // Success
+            return true; //Success
         }
 
         /// <summary>
@@ -802,22 +770,22 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // Attempt to find the scheduled game by ID
+            //Attempt to find the scheduled game by ID
             var game = await context.TeamSchedules
                 .FirstOrDefaultAsync(x => x.TeamScheduleId == id);
 
             if (game == null)
                 return false; // ❌ Game not found, return false
 
-            // Toggle the TieBreakGame property
+            //Toggle the TieBreakGame property
             game.TieBreakGame = !game.TieBreakGame;
 
-            // Update the game entity in the database
+            //Update the game entity in the database
             context.TeamSchedules.Update(game);
 
-            // Save changes asynchronously
+            //Save changes asynchronously
             await context.SaveChangesAsync();
-            return true; // Success
+            return true; //Success
         }
 
         /// <summary>
@@ -833,7 +801,7 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // Retrieve users (filter if PaidOnly is true)
+            //Retrieve users (filter if PaidOnly is true)
             var userQuery = context.ApplicationUsers.AsNoTracking();
 
             if (model.PaidOnly)
@@ -843,12 +811,12 @@ namespace FantasyFootballBlazor.Services
 
             var users = await userQuery.ToListAsync();
 
-            // Send email to each user
+            //Send email to each user
             foreach (var user in users)
             {
                 try
                 {
-                    // Prepare the email message
+                    //Prepare the email message
                     using var eMail = new System.Net.Mail.MailMessage
                     {
                         IsBodyHtml = true,
@@ -859,7 +827,7 @@ namespace FantasyFootballBlazor.Services
 
                     eMail.To.Add(user.Email);
 
-                    // Configure SMTP client 
+                    //Configure SMTP client 
                     using var smtpClient = new System.Net.Mail.SmtpClient("lilac.arvixe.com")
                     {
                         Credentials = new System.Net.NetworkCredential(
@@ -868,7 +836,7 @@ namespace FantasyFootballBlazor.Services
                         )
                     };
 
-                    // Send email asynchronously
+                    //Send email asynchronously
                     await smtpClient.SendMailAsync(eMail);
 
                     model.Message += $"✅ Email sent to: {user.Email}<br>";
@@ -889,54 +857,6 @@ namespace FantasyFootballBlazor.Services
         }
 
         /// <summary>
-        /// Asynchronously updates the tie-breaker scores for a given schedule.
-        /// </summary>
-        /// <param name="scheduleId">The ID of the schedule record to update.</param>
-        /// <param name="homeScore">The new home team score (if provided).</param>
-        /// <param name="awayScore">The new away team score (if provided).</param>
-        /// <returns>A <see cref="Task{bool}"/> indicating success or failure.</returns>
-        public async Task<bool> UpdateTieBreakScoresAsync(int scheduleId, int? homeScore, int? awayScore)
-        {
-            await using var context = _dbContextFactory.CreateDbContext();
-
-            // Retrieve the game record (tracked for update)
-            var game = await context.TeamSchedules.FirstOrDefaultAsync(x => x.TeamScheduleId == scheduleId);
-
-            if (game == null)
-            {
-                Console.WriteLine($"❌ Update Failed: Game ID {scheduleId} not found.");
-                return false;
-            }
-
-            // Ensure scores are changing before saving
-            bool isUpdated = false;
-
-            if (homeScore.HasValue && game.HomeTeamScore != homeScore)
-            {
-                game.HomeTeamScore = homeScore.Value;
-                isUpdated = true;
-            }
-
-            if (awayScore.HasValue && game.AwayTeamScore != awayScore)
-            {
-                game.AwayTeamScore = awayScore.Value;
-                isUpdated = true;
-            }
-
-            // If no changes, avoid unnecessary DB calls
-            if (!isUpdated)
-            {
-                Console.WriteLine($"ℹ️ No score changes detected for Game ID {scheduleId}.");
-                return true;
-            }
-
-            // Save changes
-            await context.SaveChangesAsync();
-            Console.WriteLine($"✅ Scores updated for Game ID {scheduleId}: Home {game.HomeTeamScore}, Away {game.AwayTeamScore}");
-            return true;
-        }
-
-        /// <summary>
         /// Asynchronously retrieves the first alert record and maps it to an UpdateAlertsViewModel.
         /// </summary>
         /// <returns>A <see cref="Task{UpdateAlertsViewModel}"/> with the current alert messages.</returns>
@@ -944,14 +864,14 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            var alert = await context.Alerts.FirstOrDefaultAsync(); // Handles empty table gracefully
+            var alert = await context.Alerts.FirstOrDefaultAsync(); //Handles empty table gracefully
 
             if (alert == null)
             {
                 Console.WriteLine("⚠️ No alert record found in the database. Returning default values.");
                 return new UpdateAlertsViewModel
                 {
-                    IndexPageAlert = string.Empty,  // Prevents null references in UI
+                    IndexPageAlert = string.Empty,  //Prevents null references in UI
                     MyTeamPageAlert = string.Empty
                 };
             }
@@ -974,18 +894,18 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            var alert = await context.Alerts.FirstOrDefaultAsync(); // Handles empty table safely
+            var alert = await context.Alerts.FirstOrDefaultAsync(); //Handles empty table safely
 
             if (alert != null)
             {
-                // Update existing alert record
+                //Update existing alert record
                 alert.IndexPageAlert = indexPageAlert;
                 alert.MyTeamPageAlert = myTeamPageAlert;
                 context.Alerts.Update(alert);
             }
             else
             {
-                // Insert new alert if none exist
+                //Insert new alert if none exist
                 Console.WriteLine("⚠️ No existing alert found. Creating a new alert record.");
                 alert = new Alert
                 {
