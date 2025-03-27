@@ -937,69 +937,6 @@ namespace FantasyFootballBlazor.Services
         }
 
         /// <summary>
-        /// Asynchronously retrieves a list of user profiles and builds a <see cref="ForgotPasswordUserViewModel"/>.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="Task{ForgotPasswordUserViewModel}"/> containing a list of selectable user profiles.
-        /// Each profile is represented as a <see cref="DropdownModel"/>, with the user’s ID and display name.
-        /// </returns>
-        public async Task<ForgotPasswordUserViewModel> GetForgotUserViewModelAsync()
-        {
-            await using var context = _dbContextFactory.CreateDbContext();
-
-            var userList = await context.ApplicationUsers
-                .AsNoTracking()
-                .Select(x => new DropdownModel
-                {
-                    Value = x.Id,
-                    Text = x.UserTeamName == null
-                        ? x.UserName
-                        : $"{x.UserName}({x.UserName})"
-                })
-                .ToListAsync();
-
-            var data = new ForgotPasswordUserViewModel
-            {
-                UserList = userList
-            };
-
-            return data;
-        }
-
-        /// <summary>
-        /// Asynchronously retrieves a user by ID, generates a password reset token, and populates the view model.
-        /// </summary>
-        /// <param name="model">The <see cref="ForgotPasswordUserViewModel"/> containing the user ID.</param>
-        /// <returns>A <see cref="ForgotPasswordUserViewModel"/> with user info and reset token.</returns>
-        public async Task<ForgotPasswordUserViewModel> ReturnForgotPasswordAsync(ForgotPasswordUserViewModel model)
-        {
-            await using var context = _dbContextFactory.CreateDbContext();
-
-            var user = await context.ApplicationUsers.FirstOrDefaultAsync(x => x.Id == model.UserId);
-
-            // ✅ Always return the same response to prevent user enumeration attacks
-            if (user == null)
-            {
-                Console.WriteLine($"⚠️ Password reset requested for non-existent user ID: {model.UserId}");
-                model.Code = string.Empty;  // No token generated
-                return model;
-            }
-
-            // ✅ Generate a password reset token securely
-            var code = await _userManager.GeneratePasswordResetTokenAsync(user);
-            code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-
-            // ✅ Populate the model (without exposing sensitive data)
-            model.UserName = user.UserName;
-            model.Email = user.Email;
-            model.Code = code;
-
-            Console.WriteLine($"✅ Password reset token generated for user: {user.UserName} ({user.Email})");
-
-            return model;
-        }
-
-        /// <summary>
         /// Asynchronously retrieves the first alert record and maps it to an UpdateAlertsViewModel.
         /// </summary>
         /// <returns>A <see cref="Task{UpdateAlertsViewModel}"/> with the current alert messages.</returns>

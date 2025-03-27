@@ -22,8 +22,6 @@
         Task<bool> UpdateGameTiebreakAsync(int id);
         Task<EmailLeagueViewModel> SendEmailToLeagueAsync(EmailLeagueViewModel model);
         Task<bool> UpdateTieBreakScoresAsync(int scheduleId, int? homeScore, int? awayScore);
-        Task<ForgotPasswordUserViewModel> GetForgotUserViewModelAsync();
-        Task<ForgotPasswordUserViewModel> ReturnForgotPasswordAsync(ForgotPasswordUserViewModel model);
         Task<UpdateAlertsViewModel> GetAlertsViewModelAsync();
         Task UpdateAlertAsync(string indexPageAlert, string myTeamPageAlert);
     }
