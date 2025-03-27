@@ -240,7 +240,7 @@ namespace FantasyFootballBlazor.Services
 
             // Step 1: Query all players with optional position filtering
             var playersQuery = context.Players
-                .Include(p => p.WeeklyStats) // ✅ Include weekly stats but filter later in-memory
+                .Include(p => p.WeeklyStats) // Include weekly stats but filter later in-memory
                 .AsNoTracking()
                 .Where(x =>
                     x.LastUpdatedDateTime != null &&
@@ -261,9 +261,9 @@ namespace FantasyFootballBlazor.Services
                     Last = x.Last,
                     TeamId = x.TeamId,
 
-                    // ✅ Apply filtering on WeeklyStats AFTER loading into memory (EF optimization)
+                    // Apply filtering on WeeklyStats AFTER loading into memory (EF optimization)
                     PlayerStats = x.WeeklyStats
-                        .Where(s => s.Year == year) // ✅ Only include stats for the selected year
+                        .Where(s => s.Year == year) // Only include stats for the selected year
                         .Select(s => new WeeklyStatModel
                         {
                             PassingYards = s.PassingYards,
@@ -298,7 +298,7 @@ namespace FantasyFootballBlazor.Services
                             Year = s.Year
                         }).ToList(),
 
-                    // ✅ Compute TotalPoints in-memory to avoid EF query conversion issues
+                    // Compute TotalPoints in-memory to avoid EF query conversion issues
                     TotalPoints = x.WeeklyStats
                         .Where(ws => ws.Year == year)
                         .Sum(ws => ws.TotalPoints ?? 0)
@@ -434,7 +434,7 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // ✅ Survivor picks can only be added for week 1
+            // Survivor picks can only be added for week 1
             if (week != 1)
                 return;
 
@@ -447,14 +447,14 @@ namespace FantasyFootballBlazor.Services
             if (player == null || teamLockStatuses == null)
                 return;
 
-            // ✅ Check if the player's team is locked
+            // Check if the player's team is locked
             var playerTeamStatus = teamLockStatuses
                 .FirstOrDefault(x => x.TeamId == player.TeamId)
                 ?.IsLocked ?? true;
 
             if (!playerTeamStatus)
             {
-                // ✅ Check if the user has already picked a player for this position
+                // Check if the user has already picked a player for this position
                 var userPick = await context.WeeklyUserTeams
                     .FirstOrDefaultAsync(x =>
                         x.Year == year &&
@@ -466,7 +466,7 @@ namespace FantasyFootballBlazor.Services
 
                 if (userPick != null)
                 {
-                    // ✅ Check if the old pick's team is locked
+                    // Check if the old pick's team is locked
                     var oldPickTeamId = await context.Players
                         .AsNoTracking()
                         .Where(p => p.PlayerId == userPick.PlayerId)
@@ -479,10 +479,10 @@ namespace FantasyFootballBlazor.Services
 
                     if (!userPickLocked)
                     {
-                        // ✅ Remove existing survivor picks for this position
+                        // Remove existing survivor picks for this position
                         await DeleteSurvivorPicksAsync(year, userId, player.Position);
 
-                        // ✅ Add new picks for all 18 weeks
+                        // Add new picks for all 18 weeks
                         for (int i = 1; i <= 18; i++)
                         {
                             await InsertNewPickAsync(playerId, i, year, userId, player, 2);
@@ -491,10 +491,10 @@ namespace FantasyFootballBlazor.Services
                 }
                 else
                 {
-                    // ✅ Ensure any old survivor picks for this position are removed
+                    // Ensure any old survivor picks for this position are removed
                     await DeleteSurvivorPicksAsync(year, userId, player.Position);
 
-                    // ✅ Add new picks for all 18 weeks
+                    // Add new picks for all 18 weeks
                     for (int i = 1; i <= 18; i++)
                     {
                         await InsertNewPickAsync(playerId, i, year, userId, player, 2);
@@ -513,14 +513,14 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // ✅ Find all survivor picks matching the user, year, and position
+            // Find all survivor picks matching the user, year, and position
             var removeSurvivorPicks = context.WeeklyUserTeams
                 .Where(x => x.UserId == userId &&
-                            x.GameTypeId == 2 && // ✅ Only delete picks for the Survivor game type
+                            x.GameTypeId == 2 && // Only delete picks for the Survivor game type
                             x.Year == year &&
                             x.Position == position);
 
-            // ✅ Remove the matched survivor picks from the database
+            // Remove the matched survivor picks from the database
             context.WeeklyUserTeams.RemoveRange(removeSurvivorPicks);
             await context.SaveChangesAsync();
         }

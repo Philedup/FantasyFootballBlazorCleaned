@@ -298,7 +298,7 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // ✅ Fetch all weekly statistics for the given player and year
+            // Fetch all weekly statistics for the given player and year
             var stats = await context.WeeklyStats
                 .AsNoTracking()
                 .Where(x => x.PlayerId == playerId && x.Year == year)
@@ -347,9 +347,9 @@ namespace FantasyFootballBlazor.Services
                     TwoPointConversions = p.TwoPointConversions
                 })
                 .OrderBy(x => x.Week)
-                .ToListAsync(); // ✅ Use async query execution to fetch data efficiently
+                .ToListAsync(); // Use async query execution to fetch data efficiently
 
-            // ✅ Fetch the player's core details and attach the fetched stats
+            // Fetch the player's core details and attach the fetched stats
             var player = await context.Players
                 .AsNoTracking()
                 .Where(x => x.PlayerId == playerId)
@@ -358,14 +358,14 @@ namespace FantasyFootballBlazor.Services
                     TeamId = x.TeamId,
                     PlayerId = x.PlayerId,
                     Position = x.Position,
-                    PlayerStats = stats, // ✅ Pass pre-fetched stats
+                    PlayerStats = stats, // Pass pre-fetched stats
                     Locked = true, // This field indicates whether the player is locked for edits
                     First = x.First,
                     FullName = x.FullName,
                     Last = x.Last,
                     PlayerPictureImageUrl = x.PlayerPictureImageUrl
                 })
-                .FirstOrDefaultAsync(); // ✅ Use async query execution to return the first match or null
+                .FirstOrDefaultAsync(); // Use async query execution to return the first match or null
 
             return player; // 🔹 Returns the player model or null if no player is found
         }
@@ -381,7 +381,7 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // ✅ Retrieve prize amounts for places 1 to 4 for GameType 1 (Weekly)
+            // Retrieve prize amounts for places 1 to 4 for GameType 1 (Weekly)
             var prizes = await context.PrizePots
                 .AsNoTracking()
                 .Where(x => x.GameTypeId == 1 && x.Place >= 1 && x.Place <= 4) // 🔍 Efficient filtering in query
@@ -389,23 +389,23 @@ namespace FantasyFootballBlazor.Services
 
             var prizeAmounts = prizes.ToDictionary(x => x.Place, x => x.Prize);
 
-            // ✅ Ensure all places have a default prize value (0 if not found)
+            // Ensure all places have a default prize value (0 if not found)
             var firstPlacePrize = prizeAmounts.GetValueOrDefault(1, 0);
             var secondPlacePrize = prizeAmounts.GetValueOrDefault(2, 0);
             var thirdPlacePrize = prizeAmounts.GetValueOrDefault(3, 0);
             var fourthPlacePrize = prizeAmounts.GetValueOrDefault(4, 0);
 
-            // ✅ Query weekly winners for the given year (only paid users)
+            // Query weekly winners for the given year (only paid users)
             var data = await context.WeeklyWinners
                 .AsNoTracking()
                 .Where(x => x.Year == year && x.UserProfile.Paid == true) // 🔍 Filter in query
-                .GroupBy(x => new { x.UserProfile.UserName, x.UserProfile.UserTeamName, x.UserId }) // ✅ Group by user
+                .GroupBy(x => new { x.UserProfile.UserName, x.UserProfile.UserTeamName, x.UserId }) // Group by user
                 .Select(group => new EarnedModel
                 {
                     UserId = group.Key.UserId,
-                    UserTeamName = string.IsNullOrWhiteSpace(group.Key.UserTeamName) ? group.Key.UserName : group.Key.UserTeamName, // ✅ Fallback to username if team name is null
+                    UserTeamName = string.IsNullOrWhiteSpace(group.Key.UserTeamName) ? group.Key.UserName : group.Key.UserTeamName, // Fallback to username if team name is null
 
-                    // ✅ Calculate total earnings based on the count of placements
+                    // Calculate total earnings based on the count of placements
                     TotalEarned = group.Count(x => x.Place == 1) * firstPlacePrize
                                   + group.Count(x => x.Place == 2) * secondPlacePrize
                                   + group.Count(x => x.Place == 3) * thirdPlacePrize
@@ -414,7 +414,7 @@ namespace FantasyFootballBlazor.Services
                 .OrderByDescending(x => x.TotalEarned) // 🔽 Sort users by total earnings (highest first)
                 .ToListAsync(); // 🟢 Async query execution
 
-            // ✅ Construct and return the earnings view model
+            // Construct and return the earnings view model
             return new EarningsViewModel
             {
                 Users = data
@@ -434,7 +434,7 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // ✅ Retrieve prize amounts for places 1 to 4 for GameType 1 (Weekly mode)
+            // Retrieve prize amounts for places 1 to 4 for GameType 1 (Weekly mode)
             var prizes = await context.PrizePots
                 .AsNoTracking()
                 .Where(x => x.GameTypeId == 1 && x.Place >= 1 && x.Place <= 4) // 🔍 Efficient filtering
@@ -442,24 +442,24 @@ namespace FantasyFootballBlazor.Services
 
             var prizeAmounts = prizes.ToDictionary(x => x.Place, x => x.Prize);
 
-            // ✅ Fetch weekly winners for the given year
+            // Fetch weekly winners for the given year
             var weeklyWinners = await context.WeeklyWinners
                 .AsNoTracking()
                 .Where(x => x.Year == year) // 🔍 Filter winners by year
                 .Select(x => new WeeklyWinnerModel
                 {
-                    UserName = string.IsNullOrWhiteSpace(x.UserProfile.UserTeamName) ? x.UserProfile.UserName : x.UserProfile.UserTeamName, // ✅ Default to username if no team name
-                    Place = x.Place ?? 0, // ✅ Handle null places by defaulting to 0
+                    UserName = string.IsNullOrWhiteSpace(x.UserProfile.UserTeamName) ? x.UserProfile.UserName : x.UserProfile.UserTeamName, // Default to username if no team name
+                    Place = x.Place ?? 0, // Handle null places by defaulting to 0
                     Id = x.UserId,
                     Week = x.Week,
                     Year = x.Year,
 
-                    // ✅ Calculate total earnings for the winner based on their placement
+                    // Calculate total earnings for the winner based on their placement
                     Total = prizeAmounts.GetValueOrDefault(x.Place ?? 0, 0) // 🟢 Safe lookup to prevent key errors
                 })
                 .ToListAsync(); // 🟢 Async execution
 
-            // ✅ Construct and return the Weekly Winners view model
+            // Construct and return the Weekly Winners view model
             return new WeeklyWinnersViewModel
             {
                 Winners = weeklyWinners
@@ -483,13 +483,13 @@ namespace FantasyFootballBlazor.Services
 
             var picks = new List<WeeklyPicksModel>();
 
-            // ✅ Loop through all past weeks (up to currentWeek - 1)
+            // Loop through all past weeks (up to currentWeek - 1)
             for (var i = 1; i < currentWeek; i++)
             {
-                // ✅ Fetch user’s weekly picks for the given week and game type
+                // Fetch user’s weekly picks for the given week and game type
                 var weekPicks = await _commonDataService.GetUsersWeeklyPicksAsync(userId, i, year, gameTypeId); // 🟢 Async call
 
-                // ✅ Create a WeeklyPicksModel and assign positions
+                // Create a WeeklyPicksModel and assign positions
                 var pick = new WeeklyPicksModel
                 {
                     Week = i,
@@ -512,23 +512,23 @@ namespace FantasyFootballBlazor.Services
                     DefenseTotalPoints = weekPicks.FirstOrDefault(x => x.Position == "DEF")?.TotalPoints ?? 0
                 };
 
-                // ✅ Calculate total points for all positions
+                // Calculate total points for all positions
                 pick.PlayerTotalPoints = pick.QuarterBackTotalPoints + pick.RunningBackTotalPoints +
                                          pick.WideReceiverTotalPoints + pick.TightEndTotalPoints +
                                          pick.KickerTotalPoints + pick.DefenseTotalPoints;
 
-                // ✅ Add to the list of weekly picks
+                // Add to the list of weekly picks
                 picks.Add(pick);
             }
 
-            // ✅ Fetch the user's display name (team name or username)
+            // Fetch the user's display name (team name or username)
             var user = await context.ApplicationUsers
                 .AsNoTracking()
                 .Where(x => x.Id == userId)
                 .Select(x => new { x.UserTeamName, x.UserName }) // 🟢 Only retrieve necessary fields
                 .FirstOrDefaultAsync(); // 🟢 Async execution
 
-            // ✅ Construct and return the view model
+            // Construct and return the view model
             return new UserWeeklyPicksDialogViewModel
             {
                 WeeklyPicks = picks,
@@ -547,14 +547,14 @@ namespace FantasyFootballBlazor.Services
         {
             foreach (var player in players)
             {
-                // ✅ If the selected week is in the past, the player is always locked.
+                // If the selected week is in the past, the player is always locked.
                 if (selectedWeek < currentWeek)
                 {
                     player.Locked = true;
                 }
                 else
                 {
-                    // ✅ Otherwise, check if the player's team is locked.
+                    // Otherwise, check if the player's team is locked.
                     player.Locked = lockedTeams.Contains(player?.TeamId ?? 0);
                 }
             }
@@ -570,8 +570,8 @@ namespace FantasyFootballBlazor.Services
         {
             foreach (var player in playersSurvivor)
             {
-                // ✅ If it's Week 1, lock status is based on the locked teams.
-                // ✅ For all other weeks, Survivor picks are permanently locked.
+                // If it's Week 1, lock status is based on the locked teams.
+                // For all other weeks, Survivor picks are permanently locked.
                 player.Locked = selectedWeek == 1
                     ? lockedTeams.Contains(player?.TeamId ?? 0)
                     : true;
@@ -587,10 +587,10 @@ namespace FantasyFootballBlazor.Services
         /// <returns>A <see cref="PlayerModel"/> containing the player's details and statistics.</returns>
         private async Task<PlayerModel> CreateAndPopulatePlayerDetailsAsync(List<PlayerModel> players, string position, int year)
         {
-            // ✅ Uses a factory to create a position-specific player model.
+            // Uses a factory to create a position-specific player model.
             var positionDetails = _playerPositionStatFactory.CreatePlayerPositionDetails(players, position);
 
-            // ✅ Asynchronously fetches and fills stats for the given year.
+            // Asynchronously fetches and fills stats for the given year.
             await PopulateStatsAsync(year, positionDetails);
 
             return positionDetails;
@@ -606,7 +606,7 @@ namespace FantasyFootballBlazor.Services
         {
             await using var context = _dbContextFactory.CreateDbContext();
 
-            // ✅ Asynchronously fetch and assign weekly stats for the specified player and year
+            // Asynchronously fetch and assign weekly stats for the specified player and year
             playerModel.PlayerStats = await context.WeeklyStats
                 .AsNoTracking()
                 .Where(x => x.PlayerId == playerModel.PlayerId && x.Year == year)
